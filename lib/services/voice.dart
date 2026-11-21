@@ -28,6 +28,55 @@ class Voice {
       await _tts.setPitch(1.0).timeout(Duration(seconds: 3));
       await _tts.awaitSpeakCompletion(true).timeout(Duration(seconds: 3));
     } catch (_) {}
+    await applyVoice();
+  }
+
+  /// أصوات العربي المتاحة في محرّك الكلام على الموبايل
+  static Future<List<Map<String, String>>> arabicVoices() async {
+    try {
+      final v = await _tts.getVoices.timeout(Duration(seconds: 5));
+      return (v as List)
+          .map((e) => (e as Map).map((k, x) => MapEntry('$k', '$x')))
+          .where((m) => (m['locale'] ?? '').toLowerCase().startsWith('ar'))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// ترتيب الأصوات: المصري والرجالي الأول (لحد ما المقاطع تتسجّل بصوت حقيقي)
+  static int _rank(Map<String, String> m) {
+    final n = (m['name'] ?? '').toLowerCase(), l = (m['locale'] ?? '').toLowerCase().replaceAll('_', '-');
+    var r = 0;
+    if (n.contains('female') || n.contains('#female')) {
+      r -= 6;
+    } else if (n.contains('male')) {
+      r += 6;
+    }
+    if (l == 'ar-eg' || n.contains('ar-eg') || n.contains('egypt')) r += 4;
+    if (n.contains('shakir') || n.contains('ard') || n.contains('arc')) r += 2;
+    if (n.contains('local')) r += 1;
+    if (m['network_required'] == '1' || m['network_required'] == 'true') r -= 1;
+    return r;
+  }
+
+  /// اسم الصوت المستخدم دلوقتي
+  static String? current;
+
+  static Future<void> applyVoice([String? name]) async {
+    final list = await arabicVoices();
+    if (list.isEmpty) return;
+    Map<String, String>? pick;
+    final want = name ?? Progress.ttsVoice;
+    if (want != null) pick = list.where((m) => m['name'] == want).firstOrNull;
+    if (pick == null) {
+      list.sort((a, b) => _rank(b) - _rank(a));
+      pick = list.first;
+    }
+    try {
+      await _tts.setVoice({'name': pick['name']!, 'locale': pick['locale']!}).timeout(Duration(seconds: 3));
+      current = pick['name'];
+    } catch (_) {}
   }
 
   static bool get enabled => Progress.voiceOn;
