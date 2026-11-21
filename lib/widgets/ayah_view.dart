@@ -55,7 +55,7 @@ class AyahView extends StatelessWidget {
       ));
     }
     if (ayah != null) {
-      spans.add(TextSpan(text: '۝${ar(ayah!)}', style: const TextStyle(color: C.gold)));
+      spans.add(TextSpan(text: '۝${ar(ayah!)}', style: TextStyle(color: C.gold)));
     }
     return RichText(
       textAlign: TextAlign.center,
