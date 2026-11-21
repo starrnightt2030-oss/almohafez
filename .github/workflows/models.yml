@@ -1,0 +1,60 @@
+name: ASR models mirror
+
+# ينسخ نموذج التعرف على التلاوة (يعمل على الجهاز بدون إنترنت) ونموذج اكتشاف الصوت
+# إلى Release منفصل اسمه asr-models، عشان التطبيق يحمّلهم مرة واحدة من مصدر ثابت.
+# النسخة دي مش "latest" عشان ماتلخبطش التحديث التلقائي.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          set -e
+          mkdir -p m && cd m
+          B=https://huggingface.co/Abdou/quran-asr-tiny/resolve/main
+          curl -fL -o quran-asr-tiny.int8.onnx $B/model.int8.onnx
+          curl -fL -o quran-asr-tokens.txt $B/tokens.txt
+          curl -fL -o quran-asr-spelling.json $B/spelling.json || true
+          curl -fL -o quran-asr-README.md $B/README.md || true
+          curl -fL -o silero_vad.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
+          ls -la
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+          echo "----- tokens"; cat quran-asr-tokens.txt
+      - name: Test on real recitations
+        run: |
+          set -e
+          pip install -q sherpa-onnx soundfile numpy
+          sudo apt-get -qq install -y ffmpeg >/dev/null
+          cd m
+          for f in 001001 001002 001007 067001 067002 112001 002255; do
+            curl -fsL -o $f.mp3 https://everyayah.com/data/Husary_Muallim_128kbps/$f.mp3
+            ffmpeg -loglevel error -y -i $f.mp3 -ar 16000 -ac 1 $f.wav
+          done
+          python3 - <<'PY'
+          import sherpa_onnx, soundfile as sf, time, glob
+          rec = sherpa_onnx.OfflineRecognizer.from_zipformer_ctc(model="quran-asr-tiny.int8.onnx", tokens="quran-asr-tokens.txt", num_threads=2)
+          for w in sorted(glob.glob('*.wav')):
+              wave, sr = sf.read(w, dtype='float32')
+              t=time.time(); s=rec.create_stream(); s.accept_waveform(sr, wave); rec.decode_stream(s)
+              print(w, round(len(wave)/sr,1),'s', round(time.time()-t,3),'s ->', s.result.text)
+              print('  tokens:', s.result.tokens[:40])
+          PY
+          rm -f *.mp3 *.wav
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: asr-models
+          name: نماذج التعرف على التلاوة
+          body: نماذج تُحمَّل داخل التطبيق مرة واحدة (التعرف على التلاوة على الجهاز + اكتشاف الصوت). ليست نسخة من التطبيق.
+          files: m/*
+          make_latest: false
+          prerelease: true
+          overwrite_files: true
