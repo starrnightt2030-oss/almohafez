@@ -10,6 +10,8 @@ class AyahView extends StatelessWidget {
   final double fontSize;
   /// عدد الكلمات المخفية في النهاية (للاختبار).
   final int hiddenFrom;
+  /// false = بعد التقييم نُظهر الكلمات الصحيحة بس، والباقي يفضل مخفي (الغلط/الناقص شرطة حمرا)
+  final bool revealAll;
   const AyahView({
     super.key,
     required this.words,
@@ -17,6 +19,7 @@ class AyahView extends StatelessWidget {
     this.result,
     this.fontSize = 26,
     this.hiddenFrom = -1,
+    this.revealAll = true,
   });
 
   @override
@@ -43,11 +46,13 @@ class AyahView extends StatelessWidget {
             break;
         }
       }
-      final hidden = hiddenFrom >= 0 && i >= hiddenFrom && r == null;
+      final ok = r != null && i < r.words.length && r.words[i].state == WordState.correct;
+      final hidden = hiddenFrom >= 0 && i >= hiddenFrom && (r == null || (!revealAll && !ok));
+      final missed = hidden && r != null;
       spans.add(TextSpan(
         text: hidden ? '${'ـ' * (words[i].length.clamp(2, 6).toInt())} ' : '${words[i]} ',
         style: TextStyle(
-          color: hidden ? C.line2 : color,
+          color: missed ? C.red : (hidden ? C.line2 : color),
           decoration: deco,
           decorationColor: C.red,
           decorationStyle: TextDecorationStyle.wavy,
