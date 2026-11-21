@@ -54,7 +54,7 @@ class _MohafezAppState extends State<MohafezApp> {
     ));
     return MaterialApp(
       key: ValueKey(C.t.id),
-      title: 'المحفظ',
+      title: 'سَنَد',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       locale: Locale('ar'),
@@ -69,7 +69,15 @@ class _MohafezAppState extends State<MohafezApp> {
   }
 }
 
-/// شاشة البداية: شعار متحرك أثناء تحميل البيانات.
+/// ألوان الهوية (ثابتة في البداية والمقدمة مهما كان الثيم)
+const _brandTop = Color(0xFF173F37);
+const _brandMid = Color(0xFF0B2722);
+const _brandBottom = Color(0xFF06171A);
+const _brandGold = Color(0xFFE7C77B);
+const _brandGoldLight = Color(0xFFF2D68E);
+const _brandText = Color(0xFFF5EBD3);
+
+/// شاشة البداية: شعار سَنَد مع توهّج ذهبي أثناء تحميل البيانات.
 class Splash extends StatefulWidget {
   const Splash({super.key});
 
@@ -84,13 +92,112 @@ class _SplashState extends State<Splash> {
     _boot();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(AssetImage(kEmblem), context);
+  }
+
   Future<void> _boot() async {
-    final t = Future.delayed(Duration(milliseconds: 1400));
+    final t = Future.delayed(Duration(milliseconds: 1900));
     await Future.wait([QuranData.load(), Courses.load()]);
     _booted = true;
     Voice.init();
     TajweedData.load();
     await t;
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(PageRouteBuilder(
+      transitionDuration: Duration(milliseconds: 700),
+      pageBuilder: (_, __, ___) => Progress.introSeen ? Shell() : IntroScreen(),
+      transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _brandBottom,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(center: Alignment(0, -0.15), radius: 1.0, colors: [_brandTop, _brandMid, _brandBottom], stops: [0, 0.55, 1]),
+        ),
+        child: Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(color: _brandGold, opacity: 0.06))),
+          Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Stack(alignment: Alignment.center, children: [
+                Container(
+                  width: 320,
+                  height: 320,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(colors: [_brandGold.withOpacity(0.24), _brandGold.withOpacity(0)]),
+                  ),
+                ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: Offset(0.9, 0.9), end: Offset(1.05, 1.05), duration: 1800.ms, curve: Curves.easeInOut),
+                Image.asset(kEmblem, width: 250, height: 250, filterQuality: FilterQuality.high)
+                    .animate()
+                    .fadeIn(duration: 600.ms)
+                    .scale(begin: Offset(0.82, 0.82), duration: 900.ms, curve: Curves.easeOutBack)
+                    .then()
+                    .shimmer(duration: 1200.ms, color: Color(0x66FFF3CF)),
+              ]),
+              SizedBox(height: 8),
+              Container(width: 60, height: 1, color: _brandGold.withOpacity(0.6)).animate().fadeIn(delay: 500.ms).scaleX(begin: 0, end: 1, duration: 600.ms),
+              SizedBox(height: 12),
+              Text('معلّمك الشخصي للقرآن الكريم', style: TextStyle(fontFamily: 'Amiri', fontSize: 20, color: _brandGoldLight))
+                  .animate()
+                  .fadeIn(delay: 700.ms, duration: 600.ms)
+                  .slideY(begin: 0.3, end: 0),
+            ]),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 40,
+            child: SafeArea(
+              top: false,
+              child: Column(children: [
+                Text('تطوير', style: TextStyle(fontSize: 11, color: Color(0xFF8FA79C))),
+                SizedBox(height: 2),
+                Text(kDeveloper, textDirection: TextDirection.ltr, style: TextStyle(fontSize: 13, color: _brandGold, letterSpacing: 1)),
+              ]).animate().fadeIn(delay: 900.ms, duration: 600.ms),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// المقدمة: ٣ صفحات تعريفية تظهر أول مرة بس.
+class IntroScreen extends StatefulWidget {
+  const IntroScreen({super.key});
+
+  @override
+  State<IntroScreen> createState() => _IntroScreenState();
+}
+
+class _IntroScreenState extends State<IntroScreen> {
+  final _pc = PageController();
+  int _i = 0;
+
+  static const _pages = [
+    (Icons.record_voice_over_rounded, 'اقرأ على شيخك', 'في أي وقت، وبكل دقة',
+        'يتلو الشيخ الآية، فتردّد خلفه دون أن تلمس الشاشة، ونصحّح لك الكلمة والحركة لحظة بلحظة.'),
+    (Icons.auto_stories_rounded, 'أتقن التجويد', 'خطوة بخطوة حتى الإتقان',
+        'أكاديمية كاملة بدروس صوتية وأمثلة بصوت الشيخ واختبار بعد كل درس، وشهادة عند كل باب.'),
+    (Icons.local_library_rounded, 'تفقّه في دينك', 'من مصادر موثوقة',
+        'مكتبة في العقيدة والفقه والسيرة والأسرة والمعاملات، وأحاديث مختارة مع شرحها واختبارات للفهم.'),
+  ];
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  Future<void> _finish() async {
+    await Progress.setIntroSeen();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       transitionDuration: Duration(milliseconds: 600),
@@ -99,63 +206,134 @@ class _SplashState extends State<Splash> {
     ));
   }
 
+  void _next() {
+    if (_i < _pages.length - 1) {
+      _pc.nextPage(duration: Duration(milliseconds: 450), curve: Curves.easeOutCubic);
+    } else {
+      _finish();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AppBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(opacity: 0.05))),
-          Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: CustomPaint(painter: _LogoPainter()),
-              )
-                  .animate()
-                  .scale(begin: Offset(0.6, 0.6), duration: 700.ms, curve: Curves.easeOutBack)
-                  .then()
-                  .rotate(begin: 0, end: 0.125, duration: 700.ms, curve: Curves.easeInOut),
-              SizedBox(height: 24),
-              Text('المحفظ', style: TextStyle(fontFamily: 'Amiri', fontSize: 40, fontWeight: FontWeight.w700, color: C.goldLight))
-                  .animate()
-                  .fadeIn(delay: 300.ms, duration: 600.ms)
-                  .slideY(begin: 0.3, end: 0),
-              SizedBox(height: 6),
-              Text('تعلّم · احفظ · تفقّه', style: TextStyle(color: C.muted, letterSpacing: 1))
-                  .animate()
-                  .fadeIn(delay: 600.ms, duration: 600.ms),
+    return Scaffold(
+      backgroundColor: _brandBottom,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_brandMid, Color(0xFF0E3A31), Color(0xFF08201C)]),
+        ),
+        child: Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(color: _brandGold, opacity: 0.05))),
+          SafeArea(
+            child: Column(children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Row(children: [
+                  Image.asset(kEmblem, width: 54, height: 54),
+                  Spacer(),
+                  TextButton(onPressed: _finish, child: Text('تخطّي', style: TextStyle(color: Color(0xFFC9B88F)))),
+                ]),
+              ),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pc,
+                  itemCount: _pages.length,
+                  onPageChanged: (i) => setState(() => _i = i),
+                  itemBuilder: (_, i) => _page(i),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(22, 0, 22, 18),
+                child: Column(children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    for (var k = 0; k < _pages.length; k++)
+                      AnimatedContainer(
+                        duration: Duration(milliseconds: 300),
+                        margin: EdgeInsets.symmetric(horizontal: 3),
+                        width: k == _i ? 26 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: k == _i ? _brandGold : _brandGold.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                  ]),
+                  SizedBox(height: 20),
+                  Pressable(
+                    onTap: _next,
+                    child: Container(
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF8E3A3), Color(0xFFD3AE5C)]),
+                        boxShadow: [BoxShadow(color: Color(0x59D3AE5C), blurRadius: 30, offset: Offset(0, 12))],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(_i == _pages.length - 1 ? 'ابدأ رحلتك' : 'التالي',
+                          style: TextStyle(color: Color(0xFF2A1E07), fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ]),
+              ),
             ]),
           ),
         ]),
       ),
     );
   }
-}
 
-class _LogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.width * 0.42;
-    final p = Paint()
-      ..color = C.gold
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.045
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawRect(Rect.fromCenter(center: c, width: r * 1.42, height: r * 1.42), p);
-    canvas.save();
-    canvas.translate(c.dx, c.dy);
-    canvas.rotate(0.785398);
-    canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: r * 1.42, height: r * 1.42), p);
-    canvas.restore();
-    canvas.drawCircle(c, r * 0.4, p);
-    canvas.drawCircle(c, r * 0.15, Paint()..color = C.green);
+  Widget _page(int i) {
+    final p = _pages[i];
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 26),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: Center(
+            child: Stack(alignment: Alignment.center, children: [
+              Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(colors: [Color(0xE62E7A63), Color(0x000E3A31)]),
+                ),
+              ),
+              Container(
+                width: 190,
+                height: 230,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(95), bottom: Radius.circular(18)),
+                  border: Border.all(color: _brandGold.withOpacity(0.7), width: 1.6),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x332B7A60), Color(0x000E3A31)]),
+                ),
+              ),
+              Container(
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF8E3A3), Color(0xFFC99A42)]),
+                  boxShadow: [BoxShadow(color: Color(0x66E7C77B), blurRadius: 40)],
+                ),
+                child: Icon(p.$1, size: 50, color: Color(0xFF2A1E07)),
+              ).animate(key: ValueKey(i)).scale(begin: Offset(0.7, 0.7), duration: 600.ms, curve: Curves.easeOutBack),
+            ]),
+          ),
+        ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(99), border: Border.all(color: _brandGold.withOpacity(0.4))),
+          child: Text('${ar(i + 1)} / ${ar(_pages.length)}', style: TextStyle(fontSize: 11.5, color: _brandGold)),
+        ),
+        SizedBox(height: 14),
+        Text(p.$2, style: TextStyle(fontFamily: 'Amiri', fontSize: 34, fontWeight: FontWeight.w700, color: _brandText, height: 1.3)),
+        Text(p.$3, style: TextStyle(fontFamily: 'Amiri', fontSize: 28, fontWeight: FontWeight.w700, color: _brandGoldLight, height: 1.3)),
+        SizedBox(height: 12),
+        Text(p.$4, style: TextStyle(fontSize: 14, color: Color(0xFFBFCDBF), height: 1.9)),
+        SizedBox(height: 18),
+      ]),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class Shell extends StatefulWidget {
@@ -240,15 +418,15 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
         bottomNavigationBar: Container(
           margin: EdgeInsets.fromLTRB(12, 0, 12, 10),
           decoration: BoxDecoration(
-            color: C.nav.withOpacity(0.97),
+            color: C.nav.withOpacity(0.96),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: C.dark ? C.line : Colors.transparent),
+            border: Border.all(color: C.dark ? C.gold.withOpacity(0.3) : C.line),
             boxShadow: [BoxShadow(color: C.dark ? Color(0x66000000) : Color(0x22223A4A), blurRadius: 20, offset: Offset(0, 8))],
           ),
           child: SafeArea(
             top: false,
             child: SizedBox(
-              height: 66,
+              height: 68,
               child: Row(children: [for (var i = 0; i < _items.length; i++) _item(i)]),
             ),
           ),
@@ -264,17 +442,25 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => goTab(i),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          AnimatedContainer(
-            duration: Duration(milliseconds: 250),
+        child: Center(
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
-            padding: EdgeInsets.symmetric(horizontal: on ? 16 : 8, vertical: 4),
-            decoration: BoxDecoration(color: on ? C.navPill : Colors.transparent, borderRadius: BorderRadius.circular(14)),
-            child: Icon(_items[i].$1, color: c, size: 24),
+            padding: EdgeInsets.symmetric(horizontal: on ? 12 : 4, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: on ? LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: C.goldGrad) : null,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: on ? [BoxShadow(color: C.gold.withOpacity(0.3), blurRadius: 12, offset: Offset(0, 4))] : null,
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(_items[i].$1, color: c, size: 22),
+              SizedBox(height: 2),
+              Text(_items[i].$2,
+                  maxLines: 1,
+                  style: TextStyle(fontSize: 10.5, color: c, fontWeight: on ? FontWeight.w600 : FontWeight.w400)),
+            ]),
           ),
-          SizedBox(height: 3),
-          Text(_items[i].$2, style: TextStyle(fontSize: 10.5, color: c, fontWeight: on ? FontWeight.w600 : FontWeight.w400)),
-        ]),
+        ),
       ),
     );
   }

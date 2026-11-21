@@ -368,7 +368,7 @@ class _HadithViewState extends State<HadithView> {
             }),
             SizedBox(width: 10),
             _square(Icons.share_rounded, 'مشاركة', () {
-              Share.share('${h.text}${h.sharh == null ? '' : '\n\nالفائدة: ${h.sharh}'}\n\n— من تطبيق المحفظ');
+              Share.share('${h.text}${h.sharh == null ? '' : '\n\nالفائدة: ${h.sharh}'}\n\n— من تطبيق سَنَد');
             }),
           ]),
         ),

@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+/// هوية التطبيق
+const kAppName = 'سَنَد';
+const kEmblem = 'assets/brand/emblem.png';
+const kDeveloper = 'Mohamed-Eldawly';
+
 /// لوحة ألوان ثيم كامل.
 class AppTheme {
   final String id;
@@ -56,72 +61,32 @@ class AppTheme {
   });
 }
 
-/// الثيمات الخمسة.
+/// الثيمات الخمسة (الترتيب ثابت لأن رقم الثيم محفوظ عند المستخدم).
 const appThemes = <AppTheme>[
-  // ١. الزمرد الذهبي — أخضر غامق وذهبي
+  // ١. الزمرد الذهبي — أخضر زمردي غامق وذهبي
   AppTheme(
     id: 'emerald', name: 'الزمرد الذهبي', desc: 'أخضر زمردي غامق بلمسات ذهبية', dark: true,
-    bg: Color(0xFF0A1714), bg2: Color(0xFF0E1F1A), surface: Color(0xFF13261F), surface2: Color(0xFF1A3229),
-    deep: Color(0xFF0F211C), nav: Color(0xFF0D1D18), line: Color(0xFF22403A), line2: Color(0xFF2C5245),
-    gold: Color(0xFFE3BB64), goldLight: Color(0xFFF3D58F), goldSoft: Color(0xFF3A3018), goldLine: Color(0xFF5C4B22), onGold: Color(0xFF1A1406),
-    text: Color(0xFFF3EFE4), textSoft: Color(0xFFD3DED9), muted: Color(0xFFA3B8AF),
-    green: Color(0xFF5FD3A0), greenSoft: Color(0xFF1F3D32), red: Color(0xFFFF7A6B), redSoft: Color(0xFF2A1714), redLine: Color(0xFF5A2A23),
-    blue: Color(0xFF7FC4F0), blueSoft: Color(0xFF1D3240), purple: Color(0xFFC49BFF), purpleSoft: Color(0xFF2C2440),
-    coral: Color(0xFFFF9B7A), coralSoft: Color(0xFF3A2420),
-    heroA: Color(0xFF1E3B2F), heroB: Color(0xFF12241D), heroText: Color(0xFFF3EFE4), heroMuted: Color(0xFFA3B8AF),
-    heroAccent: Color(0xFFE3BB64), highlight: Color(0xFF1B2F22), pattern: Color(0xFFE3BB64),
+    bg: Color(0xFF0A2B25), bg2: Color(0xFF0F3D34), surface: Color(0xFF10362E), surface2: Color(0xFF174A3B), deep: Color(0xFF0B2F28), nav: Color(0xFF071E1A), line: Color(0xFF2A5446), line2: Color(0xFF4A6B4E), gold: Color(0xFFE7C77B), goldLight: Color(0xFFF2D68E), goldSoft: Color(0xFF3A3418), goldLine: Color(0xFF6B5826), onGold: Color(0xFF2A1E07), text: Color(0xFFF5EBD3), textSoft: Color(0xFFDCCFA9), muted: Color(0xFFA9B9A8), green: Color(0xFF6FE0AE), greenSoft: Color(0xFF1B4A3C), red: Color(0xFFFF7A6B), redSoft: Color(0xFF3A1F1A), redLine: Color(0xFF6A2E26), blue: Color(0xFF7FD3E0), blueSoft: Color(0xFF16424A), purple: Color(0xFFC9A8FF), purpleSoft: Color(0xFF2E2A48), coral: Color(0xFFFFB36B), coralSoft: Color(0xFF3E2E1A), heroA: Color(0xFF2B7A60), heroB: Color(0xFF174A3B), heroText: Color(0xFFF5EBD3), heroMuted: Color(0xFFCFE3D6), heroAccent: Color(0xFFF2D68E), highlight: Color(0xFF1B4A3C), pattern: Color(0xFFE7C77B),
   ),
-  // ٢. ليالي رمضان — أزرق هادئ وكروت بيضاء
+  // ٢. ليالي رمضان — كحلي ليلي وذهبي فانوسي
   AppTheme(
-    id: 'ramadan', name: 'ليالي رمضان', desc: 'أزرق سماوي هادئ مع كروت بيضاء', dark: false,
-    bg: Color(0xFFE3ECF2), bg2: Color(0xFFF1F6F9), surface: Color(0xFFFFFFFF), surface2: Color(0xFFEDF3F7),
-    deep: Color(0xFFF4F8FB), nav: Color(0xFF2B6488), line: Color(0xFFD5E2EA), line2: Color(0xFFB8CEDB),
-    gold: Color(0xFF2D6A90), goldLight: Color(0xFF4A8DB5), goldSoft: Color(0xFFDCEAF3), goldLine: Color(0xFFA9C8DB), onGold: Color(0xFFFFFFFF),
-    text: Color(0xFF16324A), textSoft: Color(0xFF2E4A60), muted: Color(0xFF5F7B8E),
-    green: Color(0xFF26935F), greenSoft: Color(0xFFDDF1E6), red: Color(0xFFD64535), redSoft: Color(0xFFFBE5E2), redLine: Color(0xFFF0B9B1),
-    blue: Color(0xFF2F7FC1), blueSoft: Color(0xFFDDEBF8), purple: Color(0xFF6E58C6), purpleSoft: Color(0xFFE8E3F8),
-    coral: Color(0xFFD9653F), coralSoft: Color(0xFFFBE7DE),
-    heroA: Color(0xFF3B7FA6), heroB: Color(0xFF1F4E6D), heroText: Color(0xFFFFFFFF), heroMuted: Color(0xFFCFE2EE),
-    heroAccent: Color(0xFFFFFFFF), highlight: Color(0xFFE4F0F8), pattern: Color(0xFFFFFFFF),
+    id: 'ramadan', name: 'ليالي رمضان', desc: 'كحلي ليلي مع ذهبي الفوانيس', dark: true,
+    bg: Color(0xFF0C1433), bg2: Color(0xFF16204A), surface: Color(0xFF1A2756), surface2: Color(0xFF22326A), deep: Color(0xFF121C42), nav: Color(0xFF0A102C), line: Color(0xFF2A3A72), line2: Color(0xFF3A4C8A), gold: Color(0xFFF4C95D), goldLight: Color(0xFFFFDD85), goldSoft: Color(0xFF3A3420), goldLine: Color(0xFF6E5A26), onGold: Color(0xFF241A05), text: Color(0xFFEEF1FF), textSoft: Color(0xFFDCE1FA), muted: Color(0xFFAEB8E6), green: Color(0xFF7FE3B0), greenSoft: Color(0xFF1C3A3A), red: Color(0xFFFF8A7A), redSoft: Color(0xFF3A1E2A), redLine: Color(0xFF6A3040), blue: Color(0xFF8FB8FF), blueSoft: Color(0xFF1E2E5E), purple: Color(0xFFC4A8FF), purpleSoft: Color(0xFF2C2656), coral: Color(0xFFFFB36B), coralSoft: Color(0xFF3A2A26), heroA: Color(0xFF2A3C86), heroB: Color(0xFF18245A), heroText: Color(0xFFEEF1FF), heroMuted: Color(0xFFAEB8E6), heroAccent: Color(0xFFF4C95D), highlight: Color(0xFF22326A), pattern: Color(0xFFF4C95D),
   ),
-  // ٣. النعناع — فيروزي مشرق وكروت ملونة
+  // ٣. رمال — بيج وبني وذهبي
   AppTheme(
-    id: 'mint', name: 'النعناع', desc: 'فيروزي مشرق مع أقسام ملونة مبهجة', dark: false,
-    bg: Color(0xFFEFF7F5), bg2: Color(0xFFF8FCFB), surface: Color(0xFFFFFFFF), surface2: Color(0xFFEAF5F3),
-    deep: Color(0xFFF4FAF9), nav: Color(0xFFFFFFFF), line: Color(0xFFD6EAE6), line2: Color(0xFFB5DCD5),
-    gold: Color(0xFF15A898), goldLight: Color(0xFF3CC7B6), goldSoft: Color(0xFFD5F2EE), goldLine: Color(0xFF9EDDD4), onGold: Color(0xFFFFFFFF),
-    text: Color(0xFF1C3633), textSoft: Color(0xFF34504C), muted: Color(0xFF66807C),
-    green: Color(0xFF1E9E5E), greenSoft: Color(0xFFDDF3E6), red: Color(0xFFE0483A), redSoft: Color(0xFFFDE6E3), redLine: Color(0xFFF5BBB3),
-    blue: Color(0xFF2E9BDB), blueSoft: Color(0xFFDDF0FB), purple: Color(0xFF8A63DD), purpleSoft: Color(0xFFEEE6FB),
-    coral: Color(0xFFEC5E93), coralSoft: Color(0xFFFCE3EE),
-    heroA: Color(0xFF26C2B0), heroB: Color(0xFF119184), heroText: Color(0xFFFFFFFF), heroMuted: Color(0xFFD8F5F1),
-    heroAccent: Color(0xFFFFFFFF), highlight: Color(0xFFE2F6F3), pattern: Color(0xFFFFFFFF),
+    id: 'sand', name: 'رمال', desc: 'بيج دافئ مع بني وذهبي', dark: false,
+    bg: Color(0xFFF3EADB), bg2: Color(0xFFF8F1E4), surface: Color(0xFFFBF6EC), surface2: Color(0xFFF1E5CF), deep: Color(0xFFF6EEDF), nav: Color(0xFFFBF6EC), line: Color(0xFFE4D3B4), line2: Color(0xFFD2BC93), gold: Color(0xFF6B4A32), goldLight: Color(0xFF8A6446), goldSoft: Color(0xFFF1E2C6), goldLine: Color(0xFFD9B978), onGold: Color(0xFFF4DFAE), text: Color(0xFF3B2618), textSoft: Color(0xFF5A4430), muted: Color(0xFF8C7458), green: Color(0xFF4E8A5A), greenSoft: Color(0xFFE3EDDC), red: Color(0xFFB5483A), redSoft: Color(0xFFF6E1DA), redLine: Color(0xFFE5B8AC), blue: Color(0xFF4A6F94), blueSoft: Color(0xFFE1E8EF), purple: Color(0xFF85608F), purpleSoft: Color(0xFFEDE2EE), coral: Color(0xFFB8862F), coralSoft: Color(0xFFF4E6C8), heroA: Color(0xFF6B4A32), heroB: Color(0xFF3E2A1C), heroText: Color(0xFFFBF1DD), heroMuted: Color(0xFFE2CDA6), heroAccent: Color(0xFFE8C77E), highlight: Color(0xFFF1E2C6), pattern: Color(0xFFE8C77E),
   ),
-  // ٤. الباستيل — أبيض ورأس فيروزي وأقسام باستيل
+  // ٤. لؤلؤ — أبيض وكحلي وذهبي
   AppTheme(
-    id: 'pastel', name: 'الباستيل', desc: 'أبيض ناعم مع ألوان باستيل هادئة', dark: false,
-    bg: Color(0xFFF7F9FA), bg2: Color(0xFFFFFFFF), surface: Color(0xFFFFFFFF), surface2: Color(0xFFF1F5F6),
-    deep: Color(0xFFF6F9FA), nav: Color(0xFFFFFFFF), line: Color(0xFFE3EAEC), line2: Color(0xFFCFDCE0),
-    gold: Color(0xFF17ACA3), goldLight: Color(0xFF45C4BC), goldSoft: Color(0xFFDDF3F1), goldLine: Color(0xFFA6DEDA), onGold: Color(0xFFFFFFFF),
-    text: Color(0xFF223A4A), textSoft: Color(0xFF3B5464), muted: Color(0xFF6E8592),
-    green: Color(0xFF3A9E74), greenSoft: Color(0xFFDDF2E8), red: Color(0xFFDB5A4B), redSoft: Color(0xFFFBE7E3), redLine: Color(0xFFF2C0B8),
-    blue: Color(0xFF4D86D6), blueSoft: Color(0xFFDFEAFA), purple: Color(0xFF8B74D6), purpleSoft: Color(0xFFEAE5F8),
-    coral: Color(0xFFE5845F), coralSoft: Color(0xFFFCE8DD),
-    heroA: Color(0xFF1DB6AC), heroB: Color(0xFF15A299), heroText: Color(0xFFFFFFFF), heroMuted: Color(0xFFDDF6F4),
-    heroAccent: Color(0xFFFFFFFF), highlight: Color(0xFFE6F6F5), pattern: Color(0xFFFFFFFF),
+    id: 'pearl', name: 'لؤلؤ', desc: 'أبيض ناصع مع كحلي وذهبي', dark: false,
+    bg: Color(0xFFF4F7FC), bg2: Color(0xFFFFFFFF), surface: Color(0xFFFFFFFF), surface2: Color(0xFFEEF2FA), deep: Color(0xFFF7F9FD), nav: Color(0xFFFFFFFF), line: Color(0xFFE1E7F2), line2: Color(0xFFC9D4E8), gold: Color(0xFF1E3F75), goldLight: Color(0xFF2F5FA8), goldSoft: Color(0xFFE4EBF7), goldLine: Color(0xFFE9CD86), onGold: Color(0xFFFFFFFF), text: Color(0xFF13254A), textSoft: Color(0xFF2C3E63), muted: Color(0xFF6B7A99), green: Color(0xFF2E8A63), greenSoft: Color(0xFFDDF1E7), red: Color(0xFFC4483C), redSoft: Color(0xFFFBE6E3), redLine: Color(0xFFF0BDB6), blue: Color(0xFF2F6FCB), blueSoft: Color(0xFFE0EBFA), purple: Color(0xFF6D5BC4), purpleSoft: Color(0xFFE9E5F8), coral: Color(0xFFC98A2A), coralSoft: Color(0xFFFBF0DC), heroA: Color(0xFF1E3F75), heroB: Color(0xFF12264A), heroText: Color(0xFFFFFFFF), heroMuted: Color(0xFFC9D5EE), heroAccent: Color(0xFFE9CD86), highlight: Color(0xFFFBF3DF), pattern: Color(0xFFE9CD86),
   ),
-  // ٥. نور — كريمي دافئ وأخضر زيتي وذهبي
+  // ٥. نور — كريمي وأخضر وذهبي
   AppTheme(
-    id: 'noor', name: 'نور', desc: 'كريمي دافئ مع أخضر زيتي وذهبي', dark: false,
-    bg: Color(0xFFF3ECE0), bg2: Color(0xFFF9F5EE), surface: Color(0xFFFCF8F1), surface2: Color(0xFFF0E7D8),
-    deep: Color(0xFFF7F1E6), nav: Color(0xFFFCF8F1), line: Color(0xFFE6DAC5), line2: Color(0xFFD7C6A8),
-    gold: Color(0xFF3E5E4B), goldLight: Color(0xFF5E806B), goldSoft: Color(0xFFE4E9DD), goldLine: Color(0xFFC9B48A), onGold: Color(0xFFFFF8EC),
-    text: Color(0xFF2E3A30), textSoft: Color(0xFF45524A), muted: Color(0xFF7D7A6B),
-    green: Color(0xFF3E7D58), greenSoft: Color(0xFFE2EDE3), red: Color(0xFFC0503E), redSoft: Color(0xFFF7E3DD), redLine: Color(0xFFE8BDB2),
-    blue: Color(0xFF4B7FA3), blueSoft: Color(0xFFE2EBF1), purple: Color(0xFF8A6AA8), purpleSoft: Color(0xFFEDE5F1),
-    coral: Color(0xFFB8893B), coralSoft: Color(0xFFF4E8D1),
-    heroA: Color(0xFF4A6B56), heroB: Color(0xFF34503F), heroText: Color(0xFFFFF8EC), heroMuted: Color(0xFFDCD3BE),
-    heroAccent: Color(0xFFE2C27F), highlight: Color(0xFFEFE6D2), pattern: Color(0xFFE2C27F),
+    id: 'noor', name: 'نور', desc: 'كريمي هادئ مع أخضر وذهبي', dark: false,
+    bg: Color(0xFFF7F1E3), bg2: Color(0xFFFBF7EE), surface: Color(0xFFFFFDF7), surface2: Color(0xFFF1E8D3), deep: Color(0xFFFAF5EA), nav: Color(0xFFFFFDF7), line: Color(0xFFEADFC2), line2: Color(0xFFDCCB9F), gold: Color(0xFF1F6B4F), goldLight: Color(0xFF2E8A66), goldSoft: Color(0xFFE6F1EB), goldLine: Color(0xFFC9B48A), onGold: Color(0xFFFFFDF7), text: Color(0xFF2B2A22), textSoft: Color(0xFF45433A), muted: Color(0xFF8A7A4E), green: Color(0xFF1F8A5C), greenSoft: Color(0xFFE2F0E7), red: Color(0xFFB8503E), redSoft: Color(0xFFF7E3DD), redLine: Color(0xFFE8BDB2), blue: Color(0xFF2C6E78), blueSoft: Color(0xFFE3EEF0), purple: Color(0xFF8A6AA8), purpleSoft: Color(0xFFEDE5F1), coral: Color(0xFFA07A22), coralSoft: Color(0xFFF6EBCF), heroA: Color(0xFF1F6B4F), heroB: Color(0xFF174F3B), heroText: Color(0xFFFFFDF7), heroMuted: Color(0xFFE7F0EA), heroAccent: Color(0xFFF3E3AE), highlight: Color(0xFFF1E6C8), pattern: Color(0xFFE9D9A6),
   ),
 ];
 
@@ -164,9 +129,11 @@ class C {
   static Color get highlight => t.highlight;
   static Color get pattern => t.pattern;
   /// لون شريط التنقل للأيقونة النشطة
-  static Color get navActive => t.id == 'ramadan' ? Color(0xFFFFFFFF) : t.gold;
-  static Color get navIdle => t.id == 'ramadan' ? Color(0xFFB9D3E3) : t.muted;
-  static Color get navPill => t.id == 'ramadan' ? Color(0x33FFFFFF) : t.goldSoft;
+  static Color get navActive => t.onGold;
+  static Color get navIdle => t.muted;
+  static Color get navPill => t.gold;
+  /// تدرّج الأزرار والعناصر النشطة: ذهبي في الثيمات الغامقة، واللون الأساسي في الفاتحة
+  static List<Color> get goldGrad => [Color.lerp(t.gold, Colors.white, 0.2)!, t.gold];
 
   static Color accent(String name) {
     switch (name) {

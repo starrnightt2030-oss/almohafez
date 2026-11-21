@@ -89,6 +89,10 @@ class Progress {
   static String? get name => _p.getString('name');
   static Future<void> setName(String v) => _p.setString('name', v.trim());
 
+  /// المقدمة بتظهر مرة واحدة بس (المستخدم القديم اللي عنده تقدّم مايشوفهاش)
+  static bool get introSeen => (_p.getBool('intro') ?? false) || memTotal > 0 || xp > 0;
+  static Future<void> setIntroSeen() => _p.setBool('intro', true);
+
   static String get reciter => _p.getString('reciter') ?? 'Husary_Muallim_128kbps';
   static Future<void> setReciter(String v) => _p.setString('reciter', v);
 

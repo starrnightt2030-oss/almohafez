@@ -5,6 +5,7 @@ import '../data/reciters.dart';
 import '../services/voice.dart';
 import '../services/updater.dart';
 import '../widgets/update_dialog.dart';
+import 'about.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -66,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await Voice.applyVoice(list[k]['name']);
                   setS(() {});
                   if (mounted) setState(() {});
-                  await Voice.say('أهلًا بيك في المحفظ، ده صوت التوجيه', force: true);
+                  await Voice.say('أهلًا بيك في سَنَد، ده صوت التوجيه', force: true);
                 },
               ),
           ],
@@ -184,7 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
-                onPressed: () => Voice.say('السلام عليكم ورحمة الله، هذا صوت التوجيه في تطبيق المحفظ', force: true),
+                onPressed: () => Voice.say('السلام عليكم ورحمة الله، هذا صوت التوجيه في تطبيق سَنَد', force: true),
                 icon: Icon(Icons.volume_up_rounded),
                 label: Text('تجربة الصوت'),
               ),
@@ -225,29 +226,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SizedBox(height: 18),
         SectionTitle('عن التطبيق'),
         Panel(
+          onTap: () => go(context, AboutScreen()),
           child: Row(children: [
-            Icon(Icons.system_update_rounded, color: C.gold),
-            SizedBox(width: 10),
+            Image.asset(kEmblem, width: 46, height: 46),
+            SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('الإصدار ${Updater.current}', style: TextStyle(fontWeight: FontWeight.w600)),
-                Text('التحديثات بتوصلك تلقائيًا', style: TextStyle(fontSize: 12, color: C.muted)),
+                Text('$kAppName · الإصدار ${ar(Updater.current)}', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text('المطوّر $kDeveloper · التحديثات تلقائية', style: TextStyle(fontSize: 12, color: C.muted)),
               ]),
             ),
-            TextButton(onPressed: () => checkForUpdates(context, manual: true), child: Text('البحث عن تحديث')),
+            Icon(Icons.chevron_left_rounded, color: C.muted),
           ]),
         ),
         SizedBox(height: 10),
-        Panel(
-          child: Text(
-            'المحفظ تطبيق مجاني لتعلّم التجويد وحفظ القرآن الكريم والتفقه في الدين.\n\n'
-            'المصادر: نص المصحف برواية حفص (مشروع Tanzil ومجمع الملك فهد)، وبيانات أحكام التجويد (quran-tajweed)، '
-            'والتفسير الميسّر (مجمع الملك فهد)، والتلاوات من EveryAyah، وكتب الأحاديث (الأربعون النووية، الأربعون القدسية، رياض الصالحين). '
-            'الخطوط: Amiri وAmiri Quran وReadex Pro برخصة SIL OFL.\n\n'
-            'الشهادات في التطبيق تشجيعية، وليست إجازة بالسند.',
-            style: TextStyle(color: C.muted, height: 1.8, fontSize: 13),
-          ),
-        ),
+        GoldButton(label: 'البحث عن تحديث', icon: Icons.system_update_rounded, outlined: true, onPressed: () => checkForUpdates(context, manual: true)),
       ]),
     );
   }

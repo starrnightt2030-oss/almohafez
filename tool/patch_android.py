@@ -9,7 +9,7 @@ perms = ('    <uses-permission android:name="android.permission.INTERNET"/>\n'
          '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n')
 if 'RECORD_AUDIO' not in x:
     x = x.replace('<application', perms + '    <application', 1)
-x = re.sub(r'android:label="[^"]*"', 'android:label="المحفظ"', x, count=1)
+x = re.sub(r'android:label="[^"]*"', 'android:label="سند"', x, count=1)
 intent = ('        <intent>\n'
           '            <action android:name="android.speech.RecognitionService" />\n'
           '        </intent>\n'

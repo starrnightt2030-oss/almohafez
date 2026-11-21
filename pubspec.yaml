@@ -1,5 +1,5 @@
 name: almohafez
-description: "المحفظ — تعلّم التجويد واحفظ القرآن الكريم وتفقّه في دينك"
+description: "سَنَد — معلّمك الشخصي للقرآن الكريم: احفظ مع الشيخ وأتقن التجويد وتفقّه في دينك"
 publish_to: 'none'
 version: 2.0.0+2
 
@@ -29,7 +29,7 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon/icon.png"
-  adaptive_icon_background: "#0C1A16"
+  adaptive_icon_background: "assets/icon/icon_bg.png"
   adaptive_icon_foreground: "assets/icon/icon_fg.png"
   min_sdk_android: 21
 
@@ -37,6 +37,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/quran/
+    - assets/brand/
     - assets/audio/lessons/
     - assets/audio/voice/
     - assets/audio/quiz/

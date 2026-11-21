@@ -81,7 +81,7 @@ class CertificateArt extends StatelessWidget {
             Text('شهادة تقدير', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 76, fontWeight: FontWeight.w700, color: _green, height: 1.2)),
             _ornLine(),
             SizedBox(height: 6),
-            Text('يتقدّم تطبيق المحفظ بخالص التقدير والتهنئة', style: TextStyle(fontFamily: 'Amiri', fontSize: 24, color: _ink)),
+            Text('يتقدّم تطبيق سَنَد بخالص التقدير والتهنئة', style: TextStyle(fontFamily: 'Amiri', fontSize: 24, color: _ink)),
             SizedBox(height: 6),
             Text('إلى', style: TextStyle(fontFamily: 'Amiri', fontSize: 22, color: _ink)),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -123,7 +123,7 @@ class CertificateArt extends StatelessWidget {
             Text('شهادة شكر وتقدير', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 70, fontWeight: FontWeight.w700, color: _green, height: 1.2)),
             _ornLine(),
             SizedBox(height: 8),
-            Text('يتقدّم تطبيق المحفظ بخالص الشكر والتقدير إلى:', style: TextStyle(fontFamily: 'Amiri', fontSize: 23, color: _ink)),
+            Text('يتقدّم تطبيق سَنَد بخالص الشكر والتقدير إلى:', style: TextStyle(fontFamily: 'Amiri', fontSize: 23, color: _ink)),
             SizedBox(height: 10),
             Container(
               width: 560,
@@ -196,7 +196,7 @@ class CertificateArt extends StatelessWidget {
       col(Icons.calendar_month_rounded, 'التاريخ', cert.date),
       Column(mainAxisSize: MainAxisSize.min, children: [
         CustomPaint(size: Size(46, 46), painter: _MiniStar()),
-        Text('المحفظ', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 28, fontWeight: FontWeight.w700, color: _green, height: 1.1)),
+        Text('سند', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 28, fontWeight: FontWeight.w700, color: _green, height: 1.1)),
         Text('تعلّم · احفظ · تفقّه', style: TextStyle(fontFamily: 'Amiri', fontSize: 13, color: _goldDeep)),
       ]),
       col(Icons.verified_rounded, 'رمز الشهادة', cert.code),
@@ -358,7 +358,7 @@ class _Seal extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 40),
           child: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('المحفظ', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 30, fontWeight: FontWeight.w700, color: Color(0xFFF1D58E), height: 1.1)),
+              Text('سند', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 30, fontWeight: FontWeight.w700, color: Color(0xFFF1D58E), height: 1.1)),
               Text('★ ★ ★', style: TextStyle(fontSize: 10, color: Color(0xFFF1D58E))),
             ]),
           ),

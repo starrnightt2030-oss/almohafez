@@ -103,7 +103,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 ),
               )
             else
-              Text('فيه نسخة أحدث من المحفظ. حدّث دلوقتي عشان تاخد آخر التحسينات.', style: TextStyle(height: 1.7)),
+              Text('فيه نسخة أحدث من سَنَد. حدّث دلوقتي عشان تاخد آخر التحسينات.', style: TextStyle(height: 1.7)),
             if (st == _St.downloading || st == _St.installing) ...[
               SizedBox(height: 14),
               ClipRRect(

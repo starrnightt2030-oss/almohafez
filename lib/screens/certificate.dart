@@ -104,7 +104,7 @@ class _CertificateViewState extends State<CertificateView> {
       final dir = await getTemporaryDirectory();
       final f = File('${dir.path}/almohafez_${widget.cert.code}.png');
       await f.writeAsBytes(data!.buffer.asUint8List());
-      await Share.shareXFiles([XFile(f.path)], text: 'شهادتي من تطبيق المحفظ — ${widget.cert.title}');
+      await Share.shareXFiles([XFile(f.path)], text: 'شهادتي من تطبيق سَنَد — ${widget.cert.title}');
     } catch (_) {
       if (mounted) toast(context, 'تعذّرت مشاركة الشهادة');
     }
