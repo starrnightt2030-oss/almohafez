@@ -60,6 +60,14 @@ for name in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
             '        }\n'
             '    }\n\n')
         g = re.sub(r'signingConfig\s+signingConfigs\.debug', 'signingConfig signingConfigs.release', g)
+    # حجم أصغر: معالجات ARM بس (كل الموبايلات تقريبًا)، ومكتبات النظام مضغوطة جوّه الـ APK
+    if 'abiFilters' not in g:
+        if name.endswith('.kts'):
+            g = re.sub(r'(defaultConfig\s*\{)', r'\1\n        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }', g, count=1)
+            g = re.sub(r'(\n\s*buildTypes\s*\{)', '\n    packaging {\n        jniLibs { useLegacyPackaging = true }\n    }\n' + r'\1', g, count=1)
+        else:
+            g = re.sub(r'(defaultConfig\s*\{)', r"\1\n        ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }", g, count=1)
+            g = re.sub(r'(\n\s*buildTypes\s*\{)', '\n    packagingOptions {\n        jniLibs { useLegacyPackaging true }\n    }\n' + r'\1', g, count=1)
     if 'almohafez.keystore' not in g:
         g = re.sub(r'(\n\s*buildTypes\s*\{)', '\n' + block.rstrip('\n') + r'\1', g, count=1)
     p.write_text(g, encoding='utf-8')
