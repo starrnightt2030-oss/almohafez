@@ -34,6 +34,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // اختيار صوت القراءة الآلية (للمقاطع اللي لسه ماتسجّلتش بصوت حقيقي)
+  Future<void> _pickVoice() async {
+    await Voice.init();
+    final list = await Voice.arabicVoices();
+    if (!mounted) return;
+    if (list.isEmpty) {
+      toast(context, 'مفيش أصوات عربي في محرّك الكلام على الموبايل. نزّل «خدمات الكلام من Google» واختار العربي.');
+      return;
+    }
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: C.surface,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            Text('اختار الصوت اللي يعجبك — اضغط على أي صوت تسمعه', style: TextStyle(color: C.muted, fontSize: 13)),
+            SizedBox(height: 8),
+            for (var k = 0; k < list.length; k++)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Voice.current == list[k]['name'] ? Icons.check_circle_rounded : Icons.circle_outlined,
+                    color: Voice.current == list[k]['name'] ? C.gold : C.muted),
+                title: Text('صوت ${k + 1}  •  ${list[k]['locale']}'),
+                subtitle: Text(list[k]['name'] ?? '', style: TextStyle(fontSize: 11, color: C.muted)),
+                onTap: () async {
+                  await Progress.setTtsVoice(list[k]['name']!);
+                  await Voice.applyVoice(list[k]['name']);
+                  setS(() {});
+                  if (mounted) setState(() {});
+                  await Voice.say('أهلًا بيك في المحفظ، ده صوت التوجيه', force: true);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _themeCard(int i) {
     final t = appThemes[i];
     final on = C.t.id == t.id;
@@ -131,6 +172,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ]),
+            Divider(color: C.line),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.record_voice_over_rounded, color: C.gold),
+              title: Text('صوت القراءة الآلية'),
+              subtitle: Text(Voice.current ?? 'تلقائي (رجالي أولًا)', style: TextStyle(fontSize: 12, color: C.muted)),
+              trailing: Icon(Icons.chevron_left_rounded),
+              onTap: _pickVoice,
+            ),
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
