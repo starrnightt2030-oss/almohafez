@@ -12,6 +12,7 @@ import 'settings.dart';
 import 'lesson.dart';
 import 'tajweed.dart';
 import '../services/voice.dart';
+import '../widgets/illustrations.dart';
 
 bool _welcomed = false;
 
@@ -58,154 +59,222 @@ class _HomeScreenState extends State<HomeScreen> {
     final hour = DateTime.now().hour;
     final greet = hour < 12 ? 'صباح الخير' : 'مساء الخير';
     final next = _nextLesson();
+    final fresh = last == null;
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 28),
+      padding: EdgeInsets.only(bottom: 28),
       children: [
-        Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('السلام عليكم ورحمة الله', style: TextStyle(fontSize: 13, color: C.muted)),
-              SizedBox(height: 2),
-              Text(name == null || name.isEmpty ? greet : '$greet يا $name',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-            ]),
+        // ── الرأس المرسوم + بطاقة الوِرد فوقه
+        Stack(clipBehavior: Clip.none, children: [
+          SizedBox(
+            height: 250,
+            width: double.infinity,
+            child: _AnimatedScene(),
           ),
-          _chip(Icons.local_fire_department_rounded, '${ar(Progress.streak)} يوم'),
-          SizedBox(width: 8),
-          Pressable(
-            onTap: () => _open(SettingsScreen()),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: C.line)),
-              child: Icon(Icons.settings_rounded, color: C.text, size: 22),
-            ),
-          ),
-        ]).enter(0),
-        SizedBox(height: 18),
-        _hero(ref, su, memS, last == null).enter(1),
-        SizedBox(height: 14),
-        Panel(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(children: [
-            Icon(Icons.stars_rounded, color: C.gold),
-            SizedBox(width: 8),
-            Text('المستوى ${ar(Progress.level)}', style: TextStyle(fontWeight: FontWeight.w600)),
-            SizedBox(width: 12),
-            Expanded(child: ProgressBar(value: Progress.levelProgress)),
-            SizedBox(width: 12),
-            Text('${ar(Progress.xp)} نقطة', style: TextStyle(color: C.muted, fontSize: 12.5)),
-          ]),
-        ).enter(2),
-        SizedBox(height: 14),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.98,
-          children: [
-            _tile(Icons.menu_book_rounded, C.green, C.greenSoft, 'الحفظ', () => widget.onTab(1)).enter(3),
-            _tile(Icons.fact_check_rounded, C.coral, C.coralSoft, 'المراجعة', () => _open(ReviewScreen())).enter(4),
-            _tile(Icons.mic_rounded, C.gold, C.goldSoft, 'التجويد', () => widget.onTab(2)).enter(5),
-            _tile(Icons.local_library_rounded, C.blue, C.blueSoft, 'المكتبة', () => widget.onTab(3)).enter(6),
-            _tile(Icons.chrome_reader_mode_rounded, C.purple, C.purpleSoft, 'المصحف', () => _open(TafsirIndexScreen())).enter(7),
-            _tile(Icons.workspace_premium_rounded, C.gold, C.goldSoft, 'شهاداتي', () => _open(CertificatesScreen())).enter(8),
-          ],
-        ),
-        if (next != null) ...[
-          SizedBox(height: 14),
-          Panel(
-            onTap: () => _open(LessonScreen(unit: next.$1, index: next.$2)),
+          Positioned(
+            top: 14,
+            left: 20,
+            right: 20,
             child: Row(children: [
-              IconBox(icon: unitIcon(next.$1.icon), color: C.gold, bg: C.goldSoft),
-              SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('درسك التالي في التجويد · ${next.$1.title}', style: TextStyle(fontSize: 11.5, color: C.muted)),
+                  Text('السلام عليكم ورحمة الله', style: TextStyle(fontSize: 13, color: C.heroMuted)),
                   SizedBox(height: 2),
-                  Text(next.$1.lessons[next.$2].title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(name == null || name.isEmpty ? greet : 'أهلًا يا $name',
+                      style: TextStyle(fontFamily: 'Ruqaa', fontSize: 30, height: 1.25, color: C.heroAccent)),
                 ]),
               ),
-              Icon(Icons.play_circle_rounded, color: C.gold, size: 30),
-            ]),
-          ).enter(9),
-        ],
-        SizedBox(height: 14),
-        _juzMap().enter(10),
+              _heroChip(Icons.local_fire_department_rounded, '${ar(Progress.streak)} يوم'),
+              SizedBox(width: 8),
+              Pressable(
+                onTap: () => _open(SettingsScreen()),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.22)),
+                  ),
+                  child: Icon(Icons.settings_rounded, color: C.heroText, size: 22),
+                ),
+              ),
+            ]).enter(0),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 150, 20, 0),
+            child: _wird(ref, su, memS, fresh).enter(1),
+          ),
+        ]),
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            _feature(0, 'الحفظ مع الشيخ', 'ردّد وراء الشيخ وتسميع تلقائي\nمع تصحيح حرفًا حرفًا', QuranStandPainter(),
+                () => widget.onTab(1)).enter(2),
+            SizedBox(height: 12),
+            _feature(1, 'أكاديمية التجويد', '${ar(Courses.tajweed.length)} بابًا بدروس صوتية\nتدريب على آيات حقيقية وشهادات', MicPainter(),
+                () => widget.onTab(2)).enter(3),
+            SizedBox(height: 12),
+            _feature(2, 'المكتبة الإسلامية', 'فقه، عقيدة، سيرة، وأحاديث\nمشروحة بالصوت والاختبارات', BooksPainter(),
+                () => widget.onTab(3)).enter(4),
+            SizedBox(height: 18),
+            Row(children: [
+              Expanded(child: _round(Icons.history_rounded, 'المراجعة', () => _open(ReviewScreen()))),
+              Expanded(child: _round(Icons.chrome_reader_mode_rounded, 'المصحف', () => _open(TafsirIndexScreen()))),
+              Expanded(child: _round(Icons.emoji_events_rounded, 'المسابقات', () => widget.onTab(4))),
+              Expanded(child: _round(Icons.workspace_premium_rounded, 'شهاداتي', () => _open(CertificatesScreen()))),
+            ]).enter(5),
+            SizedBox(height: 18),
+            Panel(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(children: [
+                Icon(Icons.stars_rounded, color: C.gold),
+                SizedBox(width: 8),
+                Text('المستوى ${ar(Progress.level)}', style: TextStyle(fontWeight: FontWeight.w600)),
+                SizedBox(width: 12),
+                Expanded(child: ProgressBar(value: Progress.levelProgress)),
+                SizedBox(width: 12),
+                Text('${ar(Progress.xp)} نقطة', style: TextStyle(color: C.muted, fontSize: 12.5)),
+              ]),
+            ).enter(6),
+            if (next != null) ...[
+              SizedBox(height: 12),
+              Panel(
+                onTap: () => _open(LessonScreen(unit: next.$1, index: next.$2)),
+                child: Row(children: [
+                  IconBox(icon: unitIcon(next.$1.icon), color: C.gold, bg: C.goldSoft),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('درسك التالي في التجويد · ${next.$1.title}', style: TextStyle(fontSize: 11.5, color: C.muted)),
+                      SizedBox(height: 2),
+                      Text(next.$1.lessons[next.$2].title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                  Icon(Icons.play_circle_rounded, color: C.gold, size: 30),
+                ]),
+              ).enter(7),
+            ],
+            SizedBox(height: 12),
+            _juzMap().enter(8),
+          ]),
+        ),
       ],
     );
   }
 
-  Widget _chip(IconData i, String t) => Container(
+  Widget _heroChip(IconData i, String t) => Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(color: C.surface2, borderRadius: BorderRadius.circular(99), border: Border.all(color: C.line)),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: Colors.white.withOpacity(0.22)),
+        ),
         child: Row(children: [
-          Icon(i, size: 18, color: C.gold),
+          Icon(i, size: 18, color: C.heroAccent),
           SizedBox(width: 4),
-          Text(t, style: TextStyle(color: C.gold, fontWeight: FontWeight.w600, fontSize: 13.5)),
+          Text(t, style: TextStyle(color: C.heroAccent, fontWeight: FontWeight.w600, fontSize: 13.5)),
         ]),
       );
 
-  Widget _hero(AyahRef ref, Surah su, int memS, bool fresh) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [C.heroA, C.heroB],
-          ),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: C.dark ? C.line2 : Colors.transparent),
-          boxShadow: C.dark ? null : [BoxShadow(color: C.heroB.withOpacity(0.35), blurRadius: 20, offset: Offset(0, 10))],
-        ),
-        child: Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(opacity: C.dark ? 0.07 : 0.12))),
-          Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(children: [
-                Text(fresh ? 'ابدأ رحلتك مع القرآن' : 'وِردك الحالي',
-                    style: TextStyle(fontSize: 13, color: C.heroAccent, fontWeight: FontWeight.w500)),
-                Spacer(),
-                Text('${ar(memS)} من ${ar(su.count)} آية', style: TextStyle(fontSize: 12, color: C.heroMuted)),
-              ]),
-              SizedBox(height: 12),
-              Text('سورة ${su.name}', style: TextStyle(fontFamily: 'Amiri', fontSize: 30, fontWeight: FontWeight.w700, color: C.heroText)),
+  /// بطاقة وِرد اليوم: حلقة تقدّم + السورة + زر الحفظ
+  Widget _wird(AyahRef ref, Surah su, int memS, bool fresh) {
+    final v = su.count == 0 ? 0.0 : memS / su.count;
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: C.surface,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: C.dark ? C.gold.withOpacity(0.35) : C.line),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(C.dark ? 0.35 : 0.10), blurRadius: 30, offset: Offset(0, 14))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          ScoreRing(value: v, size: 64, label: '${ar((v * 100).round())}٪'),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(fresh ? 'ابدأ رحلتك مع القرآن' : 'وِردك الحالي', style: TextStyle(fontSize: 12, color: C.muted)),
               SizedBox(height: 2),
-              Text('من الآية ${ar(ref.a)} · الشيخ ${reciterById(Progress.reciter).name}',
-                  style: TextStyle(fontSize: 13, color: C.heroMuted)),
-              SizedBox(height: 14),
-              ProgressBar(value: memS / su.count, height: 8, color: C.heroAccent),
-              SizedBox(height: 16),
-              GoldButton(
-                label: fresh ? 'ابدأ الحفظ مع الشيخ' : 'أكمل الحفظ',
-                icon: Icons.play_arrow_rounded,
-                color: C.dark ? null : C.heroText,
-                fg: C.dark ? null : C.heroB,
-                onPressed: () => _open(HifzSession(surah: ref.s, startAyah: ref.a)),
-              ),
+              Text('سورة ${su.name}', style: TextStyle(fontFamily: 'Amiri', fontSize: 24, fontWeight: FontWeight.w700, color: C.gold, height: 1.3)),
+              Text('من الآية ${ar(ref.a)} · ${ar(memS)} من ${ar(su.count)} آية',
+                  style: TextStyle(fontSize: 12, color: C.muted)),
             ]),
           ),
+        ]),
+        SizedBox(height: 14),
+        GoldButton(
+          label: fresh ? 'ابدأ الحفظ مع الشيخ' : 'تابع الحفظ مع الشيخ',
+          icon: Icons.mic_rounded,
+          onPressed: () => _open(HifzSession(surah: ref.s, startAyah: ref.a)),
+        ),
+        SizedBox(height: 8),
+        Text('الشيخ ${reciterById(Progress.reciter).name}', textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: C.muted)),
+      ]),
+    );
+  }
+
+  /// كارت قسم مرسوم (زي تصميم Claude Design)
+  Widget _feature(int i, String title, String sub, CustomPainter art, VoidCallback onTap) {
+    final (grad, titleC, subC, border) = featureColors(i);
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        height: 128,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: grad),
+          border: Border.all(color: border, width: 1.5),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(C.dark ? 0.3 : 0.16), blurRadius: 22, offset: Offset(0, 10))],
+        ),
+        child: Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(color: border, opacity: 0.12))),
+          Row(children: [
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TextStyle(fontFamily: 'Amiri', fontSize: 25, fontWeight: FontWeight.w700, color: titleC, height: 1.25)),
+                  SizedBox(height: 4),
+                  Text(sub, style: TextStyle(fontSize: 12, color: subC, height: 1.55)),
+                  SizedBox(height: 6),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: titleC.withOpacity(0.6)),
+                      color: Colors.black.withOpacity(0.18),
+                    ),
+                    child: Text('دخول', style: TextStyle(fontSize: 12.5, color: titleC)),
+                  ),
+                ]),
+              ),
+            ),
+            SizedBox(width: 140, height: 112, child: CustomPaint(painter: art)),
+            SizedBox(width: 6),
+          ]),
         ]),
       ),
     );
   }
 
-  Widget _tile(IconData icon, Color c, Color bg, String title, VoidCallback onTap) {
-    return Panel(
-      onTap: onTap,
-      padding: EdgeInsets.all(10),
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        IconBox(icon: icon, color: c, bg: bg, size: 46),
-        SizedBox(height: 8),
-        Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-      ]),
-    );
-  }
+  Widget _round(IconData icon, String t, VoidCallback onTap) => Pressable(
+        onTap: onTap,
+        child: Column(children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: C.surface,
+              border: Border.all(color: C.dark ? C.gold.withOpacity(0.7) : C.goldLine, width: 1.5),
+            ),
+            child: Icon(icon, color: C.gold, size: 24),
+          ),
+          SizedBox(height: 6),
+          Text(t, style: TextStyle(fontSize: 11.5, color: C.textSoft)),
+        ]),
+      );
 
   Widget _juzMap() {
     var full = 0;
@@ -263,4 +332,29 @@ class _HomeScreenState extends State<HomeScreen> {
         SizedBox(width: 5),
         Text(t, style: TextStyle(fontSize: 11, color: C.muted)),
       ]);
+}
+
+/// مشهد الرأس مع تأرجح خفيف للفوانيس
+class _AnimatedScene extends StatefulWidget {
+  @override
+  State<_AnimatedScene> createState() => _AnimatedSceneState();
+}
+
+class _AnimatedSceneState extends State<_AnimatedScene> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: Duration(seconds: 4))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (C.t.id != 'ramadan') return CustomPaint(painter: HomeScenePainter(C.t.id));
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) => CustomPaint(painter: HomeScenePainter(C.t.id, t: _c.value)),
+    );
+  }
 }
