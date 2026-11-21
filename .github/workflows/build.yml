@@ -76,6 +76,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: >
           flutter build apk --release
+          --target-platform android-arm,android-arm64
           --build-name=${{ steps.v.outputs.version }}
           --build-number=${{ steps.v.outputs.code }}
           --dart-define=APP_VERSION=${{ steps.v.outputs.version }}
