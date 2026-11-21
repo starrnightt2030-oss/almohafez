@@ -23,10 +23,10 @@ class Voice {
       _assets = m.listAssets().where((a) => a.startsWith('assets/audio/')).toSet();
     } catch (_) {}
     try {
-      await _tts.setLanguage('ar-SA');
-      await _tts.setSpeechRate(Progress.voiceRate);
-      await _tts.setPitch(1.0);
-      await _tts.awaitSpeakCompletion(true);
+      await _tts.setLanguage('ar-SA').timeout(Duration(seconds: 5));
+      await _tts.setSpeechRate(Progress.voiceRate).timeout(Duration(seconds: 3));
+      await _tts.setPitch(1.0).timeout(Duration(seconds: 3));
+      await _tts.awaitSpeakCompletion(true).timeout(Duration(seconds: 3));
     } catch (_) {}
   }
 
@@ -55,14 +55,15 @@ class Voice {
         await _player.setAsset(a);
         final done = _player.processingStateStream.skip(1).firstWhere((s) => s == ProcessingState.completed || s == ProcessingState.idle);
         unawaited(_player.play());
-        await done;
+        // مهلة أمان: الصوت الموجّه عمره ما يوقّف الجلسة (ولا يمنع الشيخ إنه يبدأ)
+        await done.timeout(Duration(seconds: 20), onTimeout: () => ProcessingState.completed);
         return;
       } catch (_) {}
     }
     if (t != _token) return;
     try {
-      await _tts.setSpeechRate(Progress.voiceRate);
-      await _tts.speak(text);
+      await _tts.setSpeechRate(Progress.voiceRate).timeout(Duration(seconds: 3));
+      await _tts.speak(text).timeout(Duration(seconds: 25));
     } catch (_) {}
   }
 
