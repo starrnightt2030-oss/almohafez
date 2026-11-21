@@ -1,18 +1,40 @@
 name: Build APK
 
+# النسخة بتتبني لما رقم الإصدار في release.json يتغيّر (أو يدويًا من Actions).
+# كل نسخة: موقّعة بنفس المفتاح، ورقمها أكبر من اللي قبلها، وبتتنشر كـ Release باسم v<الإصدار>،
+# والتطبيق على الموبايل بيشوفها ويحمّلها ويثبّتها فوق القديمة.
 on:
   push:
     branches: [main]
+    paths: ['release.json']
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Read version
+        id: v
+        run: |
+          V=$(python3 -c "import json;print(json.load(open('release.json'))['version'])")
+          IFS=. read MA MI PA <<< "$V"
+          echo "version=$V" >> $GITHUB_OUTPUT
+          echo "code=$((MA*10000 + MI*100 + PA))" >> $GITHUB_OUTPUT
+          python3 - <<'EOF'
+          import json
+          d = json.load(open('release.json'))
+          body = 'المحفظ ' + d['version'] + '\n\n' + '\n'.join('• ' + n for n in d.get('notes', [])) + '\n\nحمّل ملف almohafez.apk وثبّته، أو حدّث من داخل التطبيق.'
+          open('release_body.md', 'w', encoding='utf-8').write(body)
+          EOF
 
       - uses: actions/setup-java@v4
         with:
@@ -24,7 +46,20 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Signing key (from GitHub Secrets)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Missing secret ANDROID_KEYSTORE_B64 — add it in Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          mkdir -p android-signing
+          echo "$KEYSTORE_B64" | base64 -d > android-signing/almohafez.keystore
+
       - name: Generate Android project
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           flutter --version
           flutter create --org com.almohafez --project-name almohafez --platforms android .
@@ -37,7 +72,13 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Build APK
-        run: flutter build apk --release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: >
+          flutter build apk --release
+          --build-name=${{ steps.v.outputs.version }}
+          --build-number=${{ steps.v.outputs.code }}
+          --dart-define=APP_VERSION=${{ steps.v.outputs.version }}
 
       - name: Collect APK
         run: cp build/app/outputs/flutter-apk/app-release.apk almohafez.apk
@@ -50,8 +91,9 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: المحفظ — نسخة ${{ github.run_number }}
-          body: نسخة تجريبية من تطبيق المحفظ. نزّل ملف almohafez.apk وثبّته على موبايلك.
+          tag_name: v${{ steps.v.outputs.version }}
+          name: المحفظ ${{ steps.v.outputs.version }}
+          body_path: release_body.md
           files: almohafez.apk
           make_latest: true
+          overwrite_files: true
