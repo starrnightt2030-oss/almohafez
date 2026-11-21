@@ -41,7 +41,7 @@ class Ear {
   static void _done() {
     final f = _finish;
     _finish = null;
-    if (f != null) Timer(const Duration(milliseconds: 250), f);
+    if (f != null) Timer(Duration(milliseconds: 250), f);
   }
 
   static bool get isListening => _s.isListening;
@@ -65,8 +65,8 @@ class Ear {
         if (r.finalResult) _done();
       },
       localeId: _locale,
-      listenFor: const Duration(seconds: 120),
-      pauseFor: const Duration(seconds: 4),
+      listenFor: Duration(seconds: 120),
+      pauseFor: Duration(seconds: 4),
       listenOptions: stt.SpeechListenOptions(
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
