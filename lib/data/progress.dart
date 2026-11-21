@@ -92,6 +92,10 @@ class Progress {
   static String get reciter => _p.getString('reciter') ?? 'Husary_Muallim_128kbps';
   static Future<void> setReciter(String v) => _p.setString('reciter', v);
 
+  /// صوت القراءة الآلية المختار (اسم الصوت في محرّك الكلام بالموبايل)
+  static String? get ttsVoice => _p.getString('tts_voice');
+  static Future<void> setTtsVoice(String v) => _p.setString('tts_voice', v);
+
   static AyahRef? get last {
     final s = _p.getInt('lastS');
     final a = _p.getInt('lastA');
