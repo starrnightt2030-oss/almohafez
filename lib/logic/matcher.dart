@@ -89,21 +89,21 @@ class Matcher {
         dp[i][j] = math.min(sub, math.min(del, ins));
       }
     }
-    final res = List<WordResult>.filled(n, const WordResult(WordState.missing));
+    final res = List<WordResult>.filled(n, WordResult(WordState.missing));
     final extra = <String>[];
     var i = n, j = m;
     while (i > 0 || j > 0) {
       if (i > 0 && j > 0) {
         final ok = similar(e[i - 1], h[j - 1]);
         if (dp[i][j] == dp[i - 1][j - 1] + (ok ? 0 : 1)) {
-          res[i - 1] = ok ? const WordResult(WordState.correct) : WordResult(WordState.wrong, h[j - 1]);
+          res[i - 1] = ok ? WordResult(WordState.correct) : WordResult(WordState.wrong, h[j - 1]);
           i--;
           j--;
           continue;
         }
       }
       if (i > 0 && dp[i][j] == dp[i - 1][j] + 1) {
-        res[i - 1] = const WordResult(WordState.missing);
+        res[i - 1] = WordResult(WordState.missing);
         i--;
       } else {
         extra.add(h[j - 1]);
@@ -111,7 +111,7 @@ class Matcher {
       }
     }
     for (var k = 0; k < givenCount && k < n; k++) {
-      res[k] = const WordResult(WordState.given);
+      res[k] = WordResult(WordState.given);
     }
     return MatchResult(res, extra.reversed.toList());
   }
