@@ -8,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import '../theme.dart';
 import '../data/quran.dart';
 import '../data/progress.dart';
+import '../widgets/certificate_art.dart';
+import '../services/voice.dart';
 
 String gradeOf(int pct) {
   if (pct >= 95) return 'ممتاز';
@@ -37,15 +39,15 @@ Future<String?> askName(BuildContext context) async {
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: C.surface,
-      title: const Text('اسمك على الشهادة'),
+      title: Text('اسمك على الشهادة'),
       content: TextField(
         controller: ctrl,
         autofocus: true,
-        decoration: const InputDecoration(hintText: 'اكتب اسمك كما تريد أن يظهر'),
+        decoration: InputDecoration(hintText: 'اكتب اسمك كما تريد أن يظهر'),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('حفظ')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: Text('حفظ')),
       ],
     ),
   );
@@ -65,13 +67,13 @@ Future<void> issueSurahCertificate(BuildContext context, int surah, int testPct)
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => CertificateView(cert: cert)));
 }
 
-Future<void> issueTajweedCertificate(BuildContext context, String levelTitle, int pct) async {
+Future<void> issueCertificate(BuildContext context, String kind, String title, int pct) async {
   final name = await askName(context);
   if (name == null || !context.mounted) return;
-  final cert = Cert('tajweed', levelTitle, name, pct, pct, gradeOf(pct), _today(), _code());
+  final cert = Cert(kind, title, name, pct, pct, gradeOf(pct), _today(), _code());
   await Progress.addCert(cert);
   if (!context.mounted) return;
-  Navigator.of(context).push(MaterialPageRoute(builder: (_) => CertificateView(cert: cert)));
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CertificateView(cert: cert)));
 }
 
 class CertificateView extends StatefulWidget {
@@ -85,6 +87,13 @@ class CertificateView extends StatefulWidget {
 class _CertificateViewState extends State<CertificateView> {
   final _key = GlobalKey();
   bool _busy = false;
+  late int _style = widget.cert.kind == 'surah' ? 0 : 1;
+
+  @override
+  void initState() {
+    super.initState();
+    Voice.cue('certificate');
+  }
 
   Future<void> _share() async {
     setState(() => _busy = true);
@@ -104,107 +113,48 @@ class _CertificateViewState extends State<CertificateView> {
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.cert;
-    final isSurah = c.kind == 'surah';
-    return Scaffold(
-      appBar: AppBar(title: const Text('شهادتك')),
-      body: SafeArea(
-        child: ListView(padding: const EdgeInsets.all(20), children: [
-          const Text('ما شاء الله، تبارك الله', textAlign: TextAlign.center, style: TextStyle(color: C.green, fontSize: 14)),
-          const SizedBox(height: 12),
-          RepaintBoundary(
-            key: _key,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFF7F1E1), borderRadius: BorderRadius.circular(20)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFB8923C), width: 1.5),
-                ),
-                child: Column(children: [
-                  const Icon(Icons.auto_awesome, color: Color(0xFFB8923C), size: 36),
-                  const SizedBox(height: 8),
-                  const Text('تطبيق المحفظ', style: TextStyle(fontFamily: 'Amiri', fontSize: 15, color: Color(0xFF8A6A22))),
-                  const SizedBox(height: 6),
-                  Text(isSurah ? 'شهادة إتمام حفظ' : 'شهادة اجتياز مستوى',
-                      style: const TextStyle(fontFamily: 'Amiri', fontSize: 30, fontWeight: FontWeight.w700, color: Color(0xFF1C3A2E))),
-                  const SizedBox(height: 10),
-                  const Text('يُشهد بأن', style: TextStyle(fontSize: 13, color: Color(0xFF4D5A53))),
-                  const SizedBox(height: 4),
-                  Text(c.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Amiri', fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF1F2A24))),
-                  const SizedBox(height: 4),
-                  Text(isSurah ? 'قد أتمّ حفظ وتسميع' : 'قد اجتاز بنجاح في أكاديمية التجويد',
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF4D5A53))),
-                  const SizedBox(height: 6),
-                  Text(c.title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontFamily: isSurah ? 'AmiriQuran' : 'Amiri',
-                          fontSize: 26,
-                          height: 1.8,
-                          fontWeight: isSurah ? FontWeight.w400 : FontWeight.w700,
-                          color: const Color(0xFF1C3A2E))),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    _stat(isSurah ? 'الاختبار' : 'النتيجة', c.hifz),
-                    const SizedBox(width: 8),
-                    if (isSurah) ...[_stat('الآيات المتقنة', c.accuracy), const SizedBox(width: 8)],
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(color: const Color(0xFFEFE5CC), borderRadius: BorderRadius.circular(10)),
-                        child: Column(children: [
-                          Text(c.grade, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF8A6A22))),
-                          const Text('التقدير', style: TextStyle(fontSize: 11, color: Color(0xFF4D5A53))),
-                        ]),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 18),
-                  Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(c.date, style: const TextStyle(fontSize: 11.5, color: Color(0xFF4D5A53))),
-                        Text('رمز الشهادة: ${c.code}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF4D5A53))),
-                      ]),
-                    ),
-                    const Icon(Icons.verified_outlined, color: Color(0xFFB8923C), size: 34),
-                  ]),
-                ]),
+    return AppPage(
+      title: 'شهادتك',
+      body: ListView(padding: EdgeInsets.all(16), children: [
+        Text('ما شاء الله، تبارك الله', textAlign: TextAlign.center, style: TextStyle(color: C.green, fontSize: 15, fontWeight: FontWeight.w600)),
+        SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 10))],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: RepaintBoundary(key: _key, child: CertificateArt(cert: widget.cert, style: _style)),
+          ),
+        ).enter(0),
+        SizedBox(height: 14),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          for (final e in [(0, 'كلاسيكي'), (1, 'القوس')])
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 5),
+              child: ChoiceChip(
+                label: Text(e.$2),
+                selected: _style == e.$1,
+                onSelected: (_) => setState(() => _style = e.$1),
+                selectedColor: C.gold,
+                labelStyle: TextStyle(color: _style == e.$1 ? C.onGold : C.text),
+                backgroundColor: C.surface,
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'هذه شهادة إتمام تشجيعية من التطبيق، وليست إجازة بالسند.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11.5, color: C.muted),
-          ),
-          const SizedBox(height: 18),
-          GoldButton(
-            label: _busy ? 'جارٍ التجهيز…' : 'مشاركة الشهادة',
-            icon: Icons.share_outlined,
-            onPressed: _busy ? null : _share,
-          ),
         ]),
-      ),
+        SizedBox(height: 8),
+        Text('أدِر الموبايل أو كبّر الصورة بعد المشاركة لرؤية التفاصيل.\nهذه شهادة تشجيعية من التطبيق، وليست إجازة بالسند.',
+            textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, color: C.muted, height: 1.6)),
+        SizedBox(height: 16),
+        GoldButton(
+          label: _busy ? 'جارٍ التجهيز…' : 'مشاركة الشهادة (صورة عالية الدقة)',
+          icon: Icons.share_rounded,
+          onPressed: _busy ? null : _share,
+        ),
+      ]),
     );
   }
-
-  Widget _stat(String label, int v) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(color: const Color(0xFFEFE5CC), borderRadius: BorderRadius.circular(10)),
-          child: Column(children: [
-            Text('${ar(v)}٪', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF1C3A2E))),
-            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF4D5A53))),
-          ]),
-        ),
-      );
 }
 
 class CertificatesScreen extends StatelessWidget {
@@ -213,10 +163,10 @@ class CertificatesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final list = Progress.certs.reversed.toList();
-    return Scaffold(
-      appBar: AppBar(title: const Text('شهاداتي')),
+    return AppPage(
+      title: 'شهاداتي',
       body: list.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text('لا توجد شهادات بعد.\nأتمّ حفظ سورة واجتز اختبارها لتحصل على أول شهادة.',
@@ -224,24 +174,24 @@ class CertificatesScreen extends StatelessWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, __) => SizedBox(height: 10),
               itemBuilder: (_, i) {
                 final c = list[i];
                 return Panel(
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CertificateView(cert: c))),
                   child: Row(children: [
-                    const IconBox(icon: Icons.workspace_premium_outlined, color: C.gold, bg: C.goldSoft),
-                    const SizedBox(width: 12),
+                    IconBox(icon: Icons.workspace_premium_outlined, color: C.gold, bg: C.goldSoft),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(c.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text('${c.grade} · ${c.date}', style: const TextStyle(fontSize: 12, color: C.muted)),
+                        Text(c.title, style: TextStyle(fontWeight: FontWeight.w600)),
+                        SizedBox(height: 2),
+                        Text('${c.grade} · ${c.date}', style: TextStyle(fontSize: 12, color: C.muted)),
                       ]),
                     ),
-                    const Icon(Icons.chevron_left, color: C.muted),
+                    Icon(Icons.chevron_left, color: C.muted),
                   ]),
                 );
               },

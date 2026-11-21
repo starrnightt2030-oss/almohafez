@@ -6,6 +6,7 @@ import '../data/progress.dart';
 import '../logic/matcher.dart';
 import '../services/audio.dart';
 import '../services/speech.dart';
+import '../services/voice.dart';
 import '../widgets/ayah_view.dart';
 import 'certificate.dart';
 
@@ -66,7 +67,10 @@ class _TestScreenState extends State<TestScreen> {
   void initState() {
     super.initState();
     _build(widget.pool, widget.questions);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Voice.cue('test_start');
+      if (mounted) _start();
+    });
   }
 
   @override
@@ -74,6 +78,7 @@ class _TestScreenState extends State<TestScreen> {
     _run++;
     Sheikh.stop();
     Ear.cancel();
+    Voice.stop();
     super.dispose();
   }
 
@@ -121,6 +126,7 @@ class _TestScreenState extends State<TestScreen> {
   Future<void> _start() async {
     final run = ++_run;
     await Ear.cancel();
+    await Voice.stop();
     setState(() {
       _phase = _P.sheikh;
       _heard = '';
@@ -171,6 +177,14 @@ class _TestScreenState extends State<TestScreen> {
       q.score = heard.trim().isEmpty ? 0 : res.score;
       _phase = _P.result;
     });
+    final sc = q.score ?? 0;
+    if (heard.trim().isEmpty) {
+      Voice.cue('no_voice');
+    } else if (sc >= 0.8) {
+      Voice.cue('test_good');
+    } else {
+      Voice.cue('test_bad');
+    }
   }
 
   void _skip() {
@@ -186,7 +200,10 @@ class _TestScreenState extends State<TestScreen> {
 
   void _hint() {
     final q = _q;
-    if (q.given + q.hints < q.words.length - 1) setState(() => q.hints++);
+    if (q.given + q.hints < q.words.length - 1) {
+      setState(() => q.hints++);
+      Voice.cue('hint');
+    }
   }
 
   void _nextQ() {
@@ -229,7 +246,7 @@ class _TestScreenState extends State<TestScreen> {
     if (_qs.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
-        body: const Center(child: Text('لا توجد أسئلة متاحة لهذا النطاق.', style: TextStyle(color: C.muted))),
+        body: Center(child: Text('لا توجد أسئلة متاحة لهذا النطاق.', style: TextStyle(color: C.muted))),
       );
     }
     return Scaffold(
@@ -239,7 +256,7 @@ class _TestScreenState extends State<TestScreen> {
           if (!_done)
             Text(
               widget.placement ? 'الجزء ${ar(_juz)} · السؤال ${ar(_i + 1)}' : 'السؤال ${ar(_i + 1)} من ${ar(_qs.length)}',
-              style: const TextStyle(fontSize: 12, color: C.muted),
+              style: TextStyle(fontSize: 12, color: C.muted),
             ),
         ]),
       ),
@@ -254,13 +271,13 @@ class _TestScreenState extends State<TestScreen> {
     return Column(children: [
       if (!widget.placement)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Row(children: [
             for (var k = 0; k < _qs.length; k++)
               Expanded(
                 child: Container(
                   height: 5,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  margin: EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(9),
                     color: k < _i
@@ -272,49 +289,49 @@ class _TestScreenState extends State<TestScreen> {
           ]),
         ),
       Expanded(
-        child: ListView(padding: const EdgeInsets.all(20), children: [
+        child: ListView(padding: EdgeInsets.all(20), children: [
           Row(children: [
-            const IconBox(icon: Icons.volume_up_outlined, color: C.green, bg: C.greenSoft, size: 36),
-            const SizedBox(width: 10),
+            IconBox(icon: Icons.volume_up_outlined, color: C.green, bg: C.greenSoft, size: 36),
+            SizedBox(width: 10),
             Expanded(
               child: Text(
                 _phase == _P.sheikh
                     ? 'الشيخ يقرأ بداية الآية…'
                     : (listening ? 'أكمل الآية واقرأ التي بعدها' : 'النتيجة'),
-                style: const TextStyle(color: C.muted, fontSize: 13.5),
+                style: TextStyle(color: C.muted, fontSize: 13.5),
               ),
             ),
-            Text('سورة ${QuranData.surah(q.ref.s).name}', style: const TextStyle(color: C.muted, fontSize: 12)),
+            Text('سورة ${QuranData.surah(q.ref.s).name}', style: TextStyle(color: C.muted, fontSize: 12)),
           ]),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Panel(
             border: C.line2,
             radius: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             child: AyahView(words: q.words, result: _phase == _P.result ? q.result : null, hiddenFrom: shown, fontSize: 25),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           if (_phase == _P.result) _resultCard(q) else _tipCard(),
           if (listening && _heard.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('أسمع: $_heard', textAlign: TextAlign.center, style: const TextStyle(color: C.muted, height: 1.7)),
+            SizedBox(height: 12),
+            Text('أسمع: $_heard', textAlign: TextAlign.center, style: TextStyle(color: C.muted, height: 1.7)),
           ],
           if (_phase != _P.result) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(children: [
               Expanded(child: GoldButton(label: 'تلميح (كلمة)', outlined: true, height: 46, onPressed: _hint)),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(child: GoldButton(label: 'تخطي السؤال', outlined: true, height: 46, onPressed: _skip)),
             ]),
           ],
         ]),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+        padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
         child: _phase == _P.result
             ? Row(children: [
                 Expanded(child: GoldButton(label: 'أعد المحاولة', outlined: true, onPressed: _start)),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(flex: 2, child: GoldButton(label: _i + 1 >= _qs.length && !widget.placement ? 'عرض النتيجة' : 'السؤال التالي', onPressed: _nextQ)),
               ])
             : Column(children: [
@@ -331,24 +348,24 @@ class _TestScreenState extends State<TestScreen> {
                     child: Icon(listening ? Icons.stop_rounded : Icons.mic_rounded, size: 34, color: C.bg),
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(listening ? 'اضغط عند الانتهاء' : 'اضغط وابدأ القراءة من حفظك',
-                    style: const TextStyle(color: C.muted, fontSize: 12.5)),
+                    style: TextStyle(color: C.muted, fontSize: 12.5)),
               ]),
       ),
     ]);
   }
 
   Widget _tipCard() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-            color: C.goldSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF5C4B22))),
-        child: const Row(children: [
+            color: C.goldSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: C.goldLine)),
+        child: Row(children: [
           Icon(Icons.info_outline, color: C.gold, size: 20),
           SizedBox(width: 10),
           Expanded(
               child: Text('أكمل الآية من حيث توقّف الشيخ، ثم اقرأ الآية التي بعدها.',
-                  style: TextStyle(fontSize: 13, height: 1.6, color: Color(0xFFF3E3B8)))),
+                  style: TextStyle(fontSize: 13, height: 1.6, color: C.text))),
         ]),
       );
 
@@ -360,13 +377,13 @@ class _TestScreenState extends State<TestScreen> {
       border: good ? C.line2 : C.redLine,
       child: Row(children: [
         Icon(good ? Icons.check_circle_outline : Icons.error_outline, color: good ? C.green : C.red),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
           child: Text(
             good
                 ? 'أحسنت! أتقنت ${ar(pct)}٪ من الكلمات.'
                 : 'أتقنت ${ar(pct)}٪. الكلمات الحمراء تحتاج مراجعة — راجعها مع الشيخ في جلسة الحفظ.',
-            style: const TextStyle(height: 1.6, fontSize: 13.5),
+            style: TextStyle(height: 1.6, fontSize: 13.5),
           ),
         ),
       ]),
@@ -375,30 +392,30 @@ class _TestScreenState extends State<TestScreen> {
 
   Widget _summary() {
     if (widget.placement) {
-      return ListView(padding: const EdgeInsets.all(20), children: [
-        const SizedBox(height: 20),
-        const Icon(Icons.insights_outlined, color: C.gold, size: 64),
-        const SizedBox(height: 16),
+      return ListView(padding: EdgeInsets.all(20), children: [
+        SizedBox(height: 20),
+        Icon(Icons.insights_outlined, color: C.gold, size: 64),
+        SizedBox(height: 16),
         Text(
           _juzPassed == 0 ? 'لنبدأ معًا من جزء عمّ' : 'تحفظ تقريبًا ${ar(_juzPassed)} جزءًا من آخر المصحف',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.5),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.5),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text(
           _juzPassed >= 30
               ? 'ما شاء الله! حفظك قوي في كل الأجزاء التي اختُبرت.'
               : 'ننصحك ببدء الحفظ والمراجعة من الجزء ${ar(30 - _juzPassed)}.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: C.muted, height: 1.7),
+          style: TextStyle(color: C.muted, height: 1.7),
         ),
-        const SizedBox(height: 30),
+        SizedBox(height: 30),
         GoldButton(label: 'رجوع', onPressed: () => Navigator.pop(context)),
       ]);
     }
     final pct = (_avg * 100).round();
     final canCert = widget.certSurah != null && pct >= 85;
-    return ListView(padding: const EdgeInsets.all(20), children: [
+    return ListView(padding: EdgeInsets.all(20), children: [
       Panel(
         radius: 24,
         child: Row(children: [
@@ -417,51 +434,51 @@ class _TestScreenState extends State<TestScreen> {
                 ),
               ),
               Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(ar(pct), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: C.gold)),
-                const Text('من ١٠٠', style: TextStyle(fontSize: 11, color: C.muted)),
+                Text(ar(pct), style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: C.gold)),
+                Text('من ١٠٠', style: TextStyle(fontSize: 11, color: C.muted)),
               ]),
             ]),
           ),
-          const SizedBox(width: 18),
+          SizedBox(width: 18),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(gradeOf(pct), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
+              Text(gradeOf(pct), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+              SizedBox(height: 6),
               Text(
                 canCert
                     ? 'بارك الله فيك! أنت مستحق لشهادة إتمام الحفظ.'
                     : (widget.certSurah != null ? 'تحتاج ٨٥٪ على الأقل للشهادة. راجع ثم أعد الاختبار.' : 'راجع الآيات التي أخطأت فيها.'),
-                style: const TextStyle(color: C.muted, height: 1.6, fontSize: 13),
+                style: TextStyle(color: C.muted, height: 1.6, fontSize: 13),
               ),
             ]),
           ),
         ]),
       ),
-      const SizedBox(height: 16),
-      const Text('تفاصيل الأسئلة', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 8),
+      SizedBox(height: 16),
+      Text('تفاصيل الأسئلة', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      SizedBox(height: 8),
       for (final q in _qs)
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.only(bottom: 8),
           child: Panel(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(children: [
               Expanded(
-                child: Text('سورة ${QuranData.surah(q.ref.s).name} · الآية ${ar(q.ref.a)}', style: const TextStyle(fontSize: 13.5)),
+                child: Text('سورة ${QuranData.surah(q.ref.s).name} · الآية ${ar(q.ref.a)}', style: TextStyle(fontSize: 13.5)),
               ),
               Text('${ar(((q.score ?? 0) * 100).round())}٪',
                   style: TextStyle(color: (q.score ?? 0) >= 0.8 ? C.green : C.red, fontWeight: FontWeight.w600)),
             ]),
           ),
         ),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
       if (canCert)
         GoldButton(
           label: 'استلم شهادتك',
           icon: Icons.workspace_premium_outlined,
           onPressed: () => issueSurahCertificate(context, widget.certSurah!, pct),
         ),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       GoldButton(
         label: 'أعد الاختبار',
         outlined: true,
