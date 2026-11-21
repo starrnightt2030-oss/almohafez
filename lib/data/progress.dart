@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'quran.dart';
 
@@ -36,7 +37,7 @@ class Progress {
       final j = jsonDecode(m) as Map<String, dynamic>;
       j.forEach((k, v) => _mem[int.parse(k)] = (v as List).cast<int>().toSet());
     }
-    _days.addAll(_p.getStringList('days') ?? const []);
+    _days.addAll(_p.getStringList('days') ?? []);
     final c = _p.getString('certs');
     if (c != null) {
       certs.addAll((jsonDecode(c) as List).map((e) => Cert.fromJson(e as Map<String, dynamic>)));
@@ -45,6 +46,7 @@ class Progress {
     if (t != null) (jsonDecode(t) as Map<String, dynamic>).forEach((k, v) => tajweed[k] = v as int);
     final ts = _p.getString('tests');
     if (ts != null) (jsonDecode(ts) as Map<String, dynamic>).forEach((k, v) => tests[k] = v as int);
+    _loadExtra();
   }
 
   static bool isMem(AyahRef r) => _mem[r.s]?.contains(r.a) ?? false;
@@ -75,11 +77,11 @@ class Progress {
 
   static int get streak {
     var d = DateTime.now();
-    if (!_days.contains(_key(d))) d = d.subtract(const Duration(days: 1));
+    if (!_days.contains(_key(d))) d = d.subtract(Duration(days: 1));
     var n = 0;
     while (_days.contains(_key(d))) {
       n++;
-      d = d.subtract(const Duration(days: 1));
+      d = d.subtract(Duration(days: 1));
     }
     return n;
   }
@@ -122,4 +124,68 @@ class Progress {
 
   static int? placement() => _p.getInt('placement');
   static Future<void> setPlacement(int juzCount) => _p.setInt('placement', juzCount);
+
+  // ===== الدروس والاختبارات =====
+  static Map<String, int> _lessons = {};
+  static Map<String, int> _units = {};
+  static Set<String> _fav = {};
+
+  static void _loadExtra() {
+    final l = _p.getString('lessons');
+    if (l != null) _lessons = (jsonDecode(l) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as int));
+    final u = _p.getString('units');
+    if (u != null) _units = (jsonDecode(u) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as int));
+    _fav = (_p.getStringList('fav') ?? []).toSet();
+  }
+
+  static bool lessonPassed(String id) => _lessons.containsKey(id);
+  static int? lessonScore(String id) => _lessons[id];
+  static Future<void> passLesson(String id, int score) async {
+    if ((_lessons[id] ?? -1) < score) _lessons[id] = score;
+    await _p.setString('lessons', jsonEncode(_lessons));
+  }
+
+  static int? unitScore(String id) => _units[id];
+  static Future<void> passUnit(String id, int score) async {
+    if ((_units[id] ?? -1) < score) _units[id] = score;
+    await _p.setString('units', jsonEncode(_units));
+  }
+
+  static bool practiced(AyahRef r) => (_p.getStringList('practiced') ?? []).contains('${r.s}:${r.a}');
+  static Future<void> markPracticed(AyahRef r) async {
+    final l = (_p.getStringList('practiced') ?? []).toSet()..add('${r.s}:${r.a}');
+    await _p.setStringList('practiced', l.toList());
+  }
+
+  static bool isFav(String key) => _fav.contains(key);
+  static List<String> get favorites => _fav.toList();
+  static Future<void> toggleFav(String key) async {
+    if (!_fav.remove(key)) _fav.add(key);
+    await _p.setStringList('fav', _fav.toList());
+  }
+
+  // ===== النقاط =====
+  static int get xp => _p.getInt('xp') ?? 0;
+  static Future<void> addXp(int v) => _p.setInt('xp', xp + v);
+  static int get level => 1 + xp ~/ 250;
+  static double get levelProgress => (xp % 250) / 250;
+  static int get bestArena => _p.getInt('bestArena') ?? 0;
+  static Future<void> setBestArena(int v) async {
+    if (v > bestArena) await _p.setInt('bestArena', v);
+  }
+
+  // ===== الإعدادات =====
+  static bool get voiceOn => _p.getBool('voiceOn') ?? true;
+  static Future<void> setVoiceOn(bool v) => _p.setBool('voiceOn', v);
+  static double get voiceRate => _p.getDouble('voiceRate') ?? 0.45;
+  static Future<void> setVoiceRate(double v) => _p.setDouble('voiceRate', v);
+  static final ValueNotifier<int> themeNotifier = ValueNotifier<int>(0);
+  static int get themeIndex => _p.getInt('theme') ?? 0;
+  static Future<void> setTheme(int i) async {
+    await _p.setInt('theme', i);
+    themeNotifier.value = i;
+  }
+
+  static bool get tajweedColors => _p.getBool('tjColors') ?? true;
+  static Future<void> setTajweedColors(bool v) => _p.setBool('tjColors', v);
 }

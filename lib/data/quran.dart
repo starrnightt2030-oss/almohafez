@@ -118,3 +118,70 @@ class QuranData {
 
   static String uthmaniText(AyahRef r) => surah(r.s).uthmani[r.a - 1];
 }
+
+class TajweedSpan {
+  final int rule;
+  final int start;
+  final int end;
+  const TajweedSpan(this.rule, this.start, this.end);
+}
+
+class TajweedAyah {
+  final String text;
+  final List<TajweedSpan> spans;
+  TajweedAyah(this.text, this.spans);
+
+  static const _pause = 'ۖۗۘۙۚۛۜ۩';
+
+  /// الكلمات مع مواضعها في النص (بدون علامات الوقف).
+  List<(int, int)> wordRanges() {
+    final out = <(int, int)>[];
+    var i = 0;
+    while (i < text.length) {
+      while (i < text.length && text[i] == ' ') {
+        i++;
+      }
+      if (i >= text.length) break;
+      final s = i;
+      while (i < text.length && text[i] != ' ') {
+        i++;
+      }
+      final w = text.substring(s, i);
+      if (!w.split('').every((c) => _pause.contains(c))) out.add((s, i));
+    }
+    return out;
+  }
+}
+
+/// نص المصحف الملوّن بأحكام التجويد (يُحمّل عند الحاجة).
+class TajweedData {
+  static List<TajweedAyah>? _a;
+  static List<List<String>>? _tafsir;
+
+  static Future<void> load() async {
+    if (_a != null) return;
+    final j = jsonDecode(await rootBundle.loadString('assets/quran/tajweed.json')) as Map<String, dynamic>;
+    _a = (j['a'] as List).map((e) {
+      final x = e as List;
+      return TajweedAyah(
+        x[0] as String,
+        (x[1] as List).map((s) {
+          final t = s as List;
+          return TajweedSpan(t[0] as int, t[1] as int, t[2] as int);
+        }).toList(),
+      );
+    }).toList();
+  }
+
+  static bool get ready => _a != null;
+
+  static TajweedAyah? of(AyahRef r) => _a == null ? null : _a![QuranData.g(r)];
+
+  static Future<String> tafsir(AyahRef r) async {
+    if (_tafsir == null) {
+      final j = jsonDecode(await rootBundle.loadString('assets/quran/tafsir.json')) as List;
+      _tafsir = j.map((s) => (s as List).cast<String>()).toList();
+    }
+    return _tafsir![r.s - 1][r.a - 1];
+  }
+}
