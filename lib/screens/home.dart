@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(children: [
               Expanded(child: _round(Icons.history_rounded, 'المراجعة', () => _open(ReviewScreen()))),
               Expanded(child: _round(Icons.chrome_reader_mode_rounded, 'المصحف', () => _open(TafsirIndexScreen()))),
-              Expanded(child: _round(Icons.emoji_events_rounded, 'المسابقات', () => widget.onTab(4))),
+              Expanded(child: _round(Icons.emoji_events_rounded, 'إنجازاتي', () => widget.onTab(4))),
               Expanded(child: _round(Icons.workspace_premium_rounded, 'شهاداتي', () => _open(CertificatesScreen()))),
             ]).enter(5),
             SizedBox(height: 18),

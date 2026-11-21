@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
 import '../data/quran.dart';
 import '../data/progress.dart';
@@ -396,6 +397,7 @@ class _HifzSessionState extends State<HifzSession> {
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: _sheikhCard(),
           ),
+          _steps(),
           _smartBanner(),
           Expanded(
             child: Container(
@@ -506,6 +508,43 @@ class _HifzSessionState extends State<HifzSession> {
     );
   }
 
+  /// خطوات الجلسة: استمع ← ردّد ← صحّح
+  Widget _steps() {
+    final step = switch (_phase) { Phase.sheikh => 0, Phase.user => 1, Phase.checking => 2, Phase.result => 2, _ => -1 };
+    Widget chip(int i, IconData icon, String t) {
+      final on = i == step;
+      final done = step > i;
+      return Expanded(
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 250),
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: on ? LinearGradient(colors: C.goldGrad) : null,
+            color: on ? null : (done ? C.greenSoft : C.surface),
+            border: Border.all(color: on ? Colors.transparent : (done ? C.green.withOpacity(0.4) : C.line)),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(done ? Icons.check_rounded : icon, size: 16, color: on ? C.onGold : (done ? C.green : C.muted)),
+            SizedBox(width: 5),
+            Text(t, style: TextStyle(fontSize: 12.5, fontWeight: on ? FontWeight.w600 : FontWeight.w400, color: on ? C.onGold : (done ? C.green : C.muted))),
+          ]),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: Row(children: [
+        chip(0, Icons.volume_up_rounded, 'استمع'),
+        SizedBox(width: 6),
+        chip(1, Icons.mic_rounded, 'ردّد'),
+        SizedBox(width: 6),
+        chip(2, Icons.spellcheck_rounded, 'صحّح'),
+      ]),
+    );
+  }
+
   /// ملاحظة التصحيح بالحروف (المصحِّح الذكي)
   String _smartNote(String word, WordResult w) {
     if (w.state == WordState.missing) return 'لم أسمع هذه الكلمة. اقرأها بوضوح ولا تتجاوزها.';
@@ -581,7 +620,17 @@ class _HifzSessionState extends State<HifzSession> {
                 _listen();
               }
             },
-            child: AnimatedContainer(
+            child: Stack(alignment: Alignment.center, children: [
+              if (listening)
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: C.green.withOpacity(_speaking ? 0.35 : 0.2)),
+                )
+                    .animate(onPlay: (c) => c.repeat())
+                    .scale(begin: Offset(1, 1), end: Offset(1.7, 1.7), duration: 1400.ms, curve: Curves.easeOut)
+                    .fadeOut(duration: 1400.ms),
+              AnimatedContainer(
               duration: Duration(milliseconds: 250),
               width: 82,
               height: 82,
@@ -594,6 +643,7 @@ class _HifzSessionState extends State<HifzSession> {
               ),
               child: Icon(listening ? Icons.stop_rounded : Icons.mic_rounded, size: 36, color: C.bg),
             ),
+            ]),
           ),
           _round(null, 'سرعة التلاوة', () {
             setState(() => _speed = _speed == 1.0 ? 0.75 : (_speed == 0.75 ? 1.25 : 1.0));

@@ -52,6 +52,10 @@ class Progress {
   static bool isMem(AyahRef r) => _mem[r.s]?.contains(r.a) ?? false;
 
   static Future<void> markMem(AyahRef r) async {
+    if (!isMem(r)) {
+      final k = 'dm_${_key(DateTime.now())}';
+      await _p.setInt(k, (_p.getInt(k) ?? 0) + 1);
+    }
     (_mem[r.s] ??= <int>{}).add(r.a);
     await _p.setString('mem', jsonEncode(_mem.map((k, v) => MapEntry('$k', v.toList()))));
   }
@@ -85,6 +89,15 @@ class Progress {
     }
     return n;
   }
+
+  /// هل كان فيه نشاط في اليوم ده؟ (لتقويم السلسلة)
+  static bool activeOn(DateTime d) => _days.contains(_key(d));
+
+  /// آيات جديدة اتحفظت النهارده، وهدف اليوم
+  static int get todayNew => _p.getInt('dm_${_key(DateTime.now())}') ?? 0;
+  static int get dailyGoal => _p.getInt('goal') ?? 5;
+  static Future<void> setDailyGoal(int v) => _p.setInt('goal', v);
+  static int get lessonsPassed => _lessons.length;
 
   static String? get name => _p.getString('name');
   static Future<void> setName(String v) => _p.setString('name', v.trim());

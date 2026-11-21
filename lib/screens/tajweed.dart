@@ -23,73 +23,176 @@ class TajweedScreen extends StatefulWidget {
 }
 
 class _TajweedScreenState extends State<TajweedScreen> {
+  static const _rowH = 118.0;
+
+  Future<void> _openUnit(int i, List<Unit> units) async {
+    final open = i == 0 || unitComplete(units[i - 1]);
+    if (!open) {
+      toast(context, 'أتقن دروس الباب السابق أولًا');
+      return;
+    }
+    await go(context, UnitScreen(unit: units[i], kind: 'tajweed'));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final units = Courses.tajweed;
     final total = Courses.tajweedLessons;
     final done = units.fold<int>(0, (a, u) => a + unitPassedCount(u));
+    var current = units.indexWhere((u) => !unitComplete(u));
+    if (current < 0) current = units.length;
     return ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 28), children: [
       HeroHeader(
         title: 'أكاديمية التجويد',
         subtitle: 'برواية حفص عن عاصم\n${ar(units.length)} بابًا · ${ar(total)} درسًا بالصوت والاختبارات',
         trailing: ScoreRing(value: total == 0 ? 0 : done / total, size: 84, label: '${ar(done)}', sub: 'من ${ar(total)}'),
       ).enter(0),
-      SizedBox(height: 18),
-      for (var i = 0; i < units.length; i++) _unit(i, units).enter(1 + i),
+      SizedBox(height: 8),
+      LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth;
+        final centers = [for (var i = 0; i < units.length; i++) _center(i, w)];
+        return SizedBox(
+          height: _rowH * units.length + 24,
+          child: Stack(children: [
+            Positioned.fill(child: CustomPaint(painter: _PathPainter(centers, current))),
+            for (var i = 0; i < units.length; i++) ..._node(i, units, centers[i], w, current),
+          ]),
+        );
+      }),
     ]);
   }
 
-  Widget _unit(int i, List<Unit> units) {
+  /// مكان كل محطة على الطريق المتعرّج (يمين ← شمال ← يمين ...)
+  Offset _center(int i, double w) {
+    const xs = [0.74, 0.5, 0.26, 0.5];
+    return Offset(w * xs[i % 4], _rowH * i + 60);
+  }
+
+  List<Widget> _node(int i, List<Unit> units, Offset c, double w, int current) {
     final u = units[i];
     final open = i == 0 || unitComplete(units[i - 1]);
     final passed = unitPassedCount(u);
     final complete = passed == u.lessons.length;
-    final exam = Progress.unitScore(u.id);
-    final current = open && !complete;
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: Panel(
-        onTap: open
-            ? () async {
-                await go(context, UnitScreen(unit: u, kind: 'tajweed'));
-                if (mounted) setState(() {});
-              }
-            : () => toast(context, 'أتقن دروس الباب السابق أولًا'),
-        border: current ? C.goldLine : C.line,
-        gradient: current ? LinearGradient(colors: [C.goldSoft, C.surface]) : null,
-        color: open ? C.surface : C.deep,
-        child: Row(children: [
-          Stack(alignment: Alignment.center, children: [
-            SizedBox(
-              width: 52,
-              height: 52,
-              child: CircularProgressIndicator(
-                value: passed / u.lessons.length,
-                strokeWidth: 3,
-                backgroundColor: C.line,
-                valueColor: AlwaysStoppedAnimation(complete ? C.green : C.gold),
-              ),
+    final isCur = i == current;
+    final size = isCur ? 72.0 : 60.0;
+    final ring = complete ? C.green : (open ? C.gold : C.line2);
+    // البطاقة على الجهة الفاضية من المحطة
+    final cardOnLeft = c.dx > w * 0.5 || (c.dx == w * 0.5 && i % 2 == 0);
+    const cardW = 140.0;
+    final double cardLeft = (cardOnLeft ? (c.dx - size / 2 - 12 - cardW) : (c.dx + size / 2 + 12)).clamp(0.0, w - cardW).toDouble();
+    return [
+      Positioned(
+        left: c.dx - size / 2,
+        top: c.dy - size / 2,
+        child: Pressable(
+          onTap: () => _openUnit(i, units),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: open
+                  ? LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: complete ? [Color.lerp(C.green, Colors.white, 0.15)!, C.green] : C.goldGrad)
+                  : null,
+              color: open ? null : C.surface2,
+              border: Border.all(color: isCur ? C.goldLight : ring.withOpacity(0.7), width: isCur ? 3 : 1.5),
+              boxShadow: isCur ? [BoxShadow(color: C.gold.withOpacity(0.45), blurRadius: 24, spreadRadius: 2)] : null,
             ),
-            Icon(open ? unitIcon(u.icon) : Icons.lock_rounded, color: open ? (complete ? C.green : C.gold) : C.muted, size: 24),
-          ]),
-          SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('الباب ${ar(i + 1)}', style: TextStyle(fontSize: 11.5, color: C.muted)),
-              Text(u.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: open ? C.text : C.muted)),
-              SizedBox(height: 3),
-              Text(u.sub, style: TextStyle(fontSize: 12, color: C.muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: Stack(alignment: Alignment.center, children: [
+              if (open && !complete)
+                SizedBox(
+                  width: size - 8,
+                  height: size - 8,
+                  child: CircularProgressIndicator(
+                    value: passed / u.lessons.length,
+                    strokeWidth: 3,
+                    backgroundColor: Colors.black.withOpacity(0.12),
+                    valueColor: AlwaysStoppedAnimation(C.onGold.withOpacity(0.8)),
+                  ),
+                ),
+              Icon(
+                complete ? Icons.check_rounded : (open ? unitIcon(u.icon) : Icons.lock_rounded),
+                color: open ? (complete ? Colors.white : C.onGold) : C.muted,
+                size: isCur ? 32 : 26,
+              ),
             ]),
           ),
-          SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('${ar(passed)}/${ar(u.lessons.length)}', style: TextStyle(color: complete ? C.green : C.gold, fontWeight: FontWeight.w700)),
-            if (exam != null) Icon(Icons.workspace_premium_rounded, color: C.gold, size: 18),
-          ]),
-        ]),
+        ),
       ),
-    );
+      Positioned(
+        left: cardLeft,
+        top: c.dy - 34,
+        width: cardW,
+        child: Pressable(
+          onTap: () => _openUnit(i, units),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isCur ? C.goldSoft : C.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isCur ? C.goldLine : C.line),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(isCur ? 'الباب ${ar(i + 1)} · ابدأ من هنا' : 'الباب ${ar(i + 1)}',
+                  style: TextStyle(fontSize: 10.5, color: isCur ? C.gold : C.muted, fontWeight: isCur ? FontWeight.w600 : FontWeight.w400)),
+              Text(u.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13.5, height: 1.4, fontWeight: FontWeight.w600, color: open ? C.text : C.muted)),
+              Row(children: [
+                Text('${ar(passed)}/${ar(u.lessons.length)} دروس', style: TextStyle(fontSize: 10.5, color: complete ? C.green : C.muted)),
+                if (Progress.unitScore(u.id) != null) ...[SizedBox(width: 4), Icon(Icons.workspace_premium_rounded, color: C.gold, size: 14)],
+              ]),
+            ]),
+          ),
+        ),
+      ),
+    ];
   }
+}
+
+/// الطريق المتعرّج بين المحطات: الجزء اللي خلص ذهبي، والباقي منقّط.
+class _PathPainter extends CustomPainter {
+  final List<Offset> pts;
+  final int current;
+  _PathPainter(this.pts, this.current);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (pts.length < 2) return;
+    for (var i = 0; i < pts.length - 1; i++) {
+      final a = pts[i], b = pts[i + 1];
+      final mid = (a.dy + b.dy) / 2;
+      final path = Path()
+        ..moveTo(a.dx, a.dy)
+        ..cubicTo(a.dx, mid, b.dx, mid, b.dx, b.dy);
+      final done = i < current;
+      final p = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = done ? 6 : 4
+        ..color = done ? C.gold.withOpacity(0.85) : C.line2;
+      if (done) {
+        canvas.drawPath(path, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 14
+          ..color = C.gold.withOpacity(0.12));
+        canvas.drawPath(path, p);
+      } else {
+        for (final m in path.computeMetrics()) {
+          var d = 0.0;
+          while (d < m.length) {
+            canvas.drawPath(m.extractPath(d, math.min(d + 8, m.length)), p);
+            d += 16;
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PathPainter old) => old.current != current || old.pts.length != pts.length;
 }
 
 /// صفحة باب/قسم: الدروس، التمارين، الاختبار الشامل والشهادة.

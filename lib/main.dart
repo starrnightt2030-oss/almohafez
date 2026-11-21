@@ -385,7 +385,7 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
     (Icons.menu_book_rounded, 'الحفظ'),
     (Icons.mic_rounded, 'التجويد'),
     (Icons.local_library_rounded, 'المكتبة'),
-    (Icons.emoji_events_rounded, 'المسابقات'),
+    (Icons.emoji_events_rounded, 'إنجازاتي'),
   ];
 
   @override

@@ -545,7 +545,7 @@ class _OnHero extends InheritedWidget {
   bool updateShouldNotify(covariant InheritedWidget oldWidget) => false;
 }
 
-/// رأس صفحة بزخرفة إسلامية بألوان الثيم.
+/// رأس صفحة بزخرفة إسلامية بألوان الثيم (تدرّج الهوية + إطار ذهبي + قوس وهلال).
 class HeroHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -555,26 +555,25 @@ class HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? C.heroAccent;
-    final colors = C.dark ? [Color.lerp(C.surface2, tint, 0.16)!, C.surface] : [C.heroA, C.heroB];
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: colors),
-          border: Border.all(color: C.dark ? tint.withOpacity(0.3) : Colors.transparent),
+          gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [C.heroA, C.heroB]),
+          border: Border.all(color: C.heroAccent.withOpacity(0.45), width: 1.2),
           borderRadius: BorderRadius.circular(26),
-          boxShadow: C.dark ? null : [BoxShadow(color: C.heroB.withOpacity(0.3), blurRadius: 18, offset: Offset(0, 8))],
+          boxShadow: [BoxShadow(color: C.heroB.withOpacity(C.dark ? 0.5 : 0.3), blurRadius: 20, offset: Offset(0, 10))],
         ),
         child: Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(color: C.pattern, opacity: C.dark ? 0.07 : 0.12))),
+          Positioned.fill(child: CustomPaint(painter: StarPatternPainter(color: C.pattern, opacity: C.dark ? 0.09 : 0.13))),
+          Positioned.fill(child: CustomPaint(painter: _HeroOrnament(C.heroAccent))),
           Padding(
             padding: EdgeInsets.all(20),
             child: Row(children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: C.heroText)),
-                  SizedBox(height: 6),
+                  Text(title, style: TextStyle(fontFamily: 'Amiri', fontSize: 27, height: 1.3, fontWeight: FontWeight.w700, color: C.heroAccent)),
+                  SizedBox(height: 4),
                   Text(subtitle, style: TextStyle(fontSize: 13, color: C.heroMuted, height: 1.6)),
                 ]),
               ),
@@ -585,6 +584,36 @@ class HeroHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// قوس ذهبي خفيف وهلال في ركن الرأس
+class _HeroOrnament extends CustomPainter {
+  final Color c;
+  _HeroOrnament(this.c);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final p = Paint()
+      ..color = c.withOpacity(0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.3;
+    final x = w * 0.40, hw = h * 0.36;
+    final arch = Path()
+      ..moveTo(x - hw, h + 2)
+      ..lineTo(x - hw, h * 0.55)
+      ..quadraticBezierTo(x - hw, h * 0.12, x, h * 0.02)
+      ..quadraticBezierTo(x + hw, h * 0.12, x + hw, h * 0.55)
+      ..lineTo(x + hw, h + 2);
+    canvas.drawPath(arch, p);
+    final o = Offset(x, h * 0.42);
+    final r = h * 0.14;
+    final moon = Path.combine(PathOperation.difference, Path()..addOval(Rect.fromCircle(center: o, radius: r)),
+        Path()..addOval(Rect.fromCircle(center: o + Offset(r * 0.42, -r * 0.18), radius: r * 0.86)));
+    canvas.drawPath(moon, Paint()..color = c.withOpacity(0.35));
+  }
+
+  @override
+  bool shouldRepaint(covariant _HeroOrnament old) => old.c != c;
 }
 
 extension EnterAnim on Widget {

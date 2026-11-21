@@ -9,6 +9,8 @@ import '../logic/matcher.dart';
 import '../services/voice.dart';
 import 'tajweed.dart';
 import 'reader.dart';
+import 'lesson.dart';
+import '../widgets/illustrations.dart';
 
 /// المكتبة الإسلامية: العلوم الشرعية، الحديث الشريف، التفسير.
 class LibraryScreen extends StatefulWidget {
@@ -34,28 +36,50 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final cats = Courses.library;
+    (Unit, int)? cont;
+    for (final u in cats) {
+      for (var k = 0; k < u.lessons.length && cont == null; k++) {
+        if (!Progress.lessonPassed(u.lessons[k].id)) cont = (u, k);
+      }
+      if (cont != null) break;
+    }
     return ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 28), children: [
       Row(children: [
-        Expanded(child: Text('المكتبة الإسلامية', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700))),
-        _iconBtn(Icons.search_rounded, 'بحث في الأحاديث', () => go(context, HadithSearchScreen())),
-        SizedBox(width: 8),
+        Expanded(child: Text('المكتبة الإسلامية', style: TextStyle(fontFamily: 'Ruqaa', fontSize: 30, height: 1.3, color: C.gold))),
         _iconBtn(Icons.bookmark_rounded, 'المحفوظات', () async {
           await go(context, FavoritesScreen());
           if (mounted) setState(() {});
         }),
       ]).enter(0),
-      SizedBox(height: 14),
-      if (_ready) _today().enter(1),
+      SizedBox(height: 10),
+      Pressable(
+        onTap: () => go(context, HadithSearchScreen()),
+        child: Container(
+          height: 50,
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(color: C.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: C.dark ? C.gold.withOpacity(0.3) : C.line)),
+          child: Row(children: [
+            Icon(Icons.search_rounded, color: C.muted),
+            SizedBox(width: 10),
+            Text('ابحث في الأحاديث…', style: TextStyle(color: C.muted, fontSize: 13.5)),
+          ]),
+        ),
+      ).enter(1),
+      if (cont != null) ...[
+        SizedBox(height: 14),
+        _continue(cont.$1, cont.$2).enter(2),
+      ],
       SizedBox(height: 18),
       SectionTitle('العلوم الشرعية'),
       GridView.builder(
         shrinkWrap: true,
         physics: NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.05),
+            crossAxisCount: 3, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.82),
         itemCount: cats.length,
-        itemBuilder: (_, i) => _cat(cats[i]).enter(2 + i),
+        itemBuilder: (_, i) => _cat(cats[i], i).enter(3 + i),
       ),
+      if (_ready) ...[SizedBox(height: 18), SectionTitle('من كنوز السنة'), _today().enter(4)],
       SizedBox(height: 18),
       SectionTitle('الحديث الشريف'),
       if (!_ready) Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())),
@@ -126,28 +150,84 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _cat(Unit u) {
+  Widget _continue(Unit u, int k) {
+    final (grad, titleC, subC, border) = featureColors(0);
     final done = unitPassedCount(u);
-    final c = C.accent(u.color);
-    return Panel(
-      padding: EdgeInsets.all(14),
+    return Pressable(
+      onTap: () async {
+        await go(context, LessonScreen(unit: u, index: k));
+        if (mounted) setState(() {});
+      },
+      child: Container(
+        padding: EdgeInsets.all(16),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: grad),
+          border: Border.all(color: border.withOpacity(0.6)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(C.dark ? 0.3 : 0.15), blurRadius: 20, offset: Offset(0, 10))],
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('أكمل التعلّم', style: TextStyle(fontSize: 11.5, color: titleC)),
+              SizedBox(height: 4),
+              Text(u.lessons[k].title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'Amiri', fontSize: 21, fontWeight: FontWeight.w700, color: Colors.white, height: 1.3)),
+              Text('${u.title} · الدرس ${ar(k + 1)} من ${ar(u.lessons.length)}', style: TextStyle(fontSize: 12, color: subC)),
+              SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: done / u.lessons.length,
+                  minHeight: 5,
+                  backgroundColor: Colors.black.withOpacity(0.25),
+                  valueColor: AlwaysStoppedAnimation(titleC),
+                ),
+              ),
+            ]),
+          ),
+          SizedBox(width: 14),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color.lerp(titleC, Colors.white, 0.2)!, titleC])),
+            child: Icon(Icons.play_arrow_rounded, color: grad.last, size: 30),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _cat(Unit u, int i) {
+    final done = unitPassedCount(u);
+    final (grad, titleC, subC, border) = featureColors(i);
+    return Pressable(
       onTap: () async {
         await go(context, UnitScreen(unit: u, kind: 'ilm'));
         if (mounted) setState(() {});
       },
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          IconBox(icon: unitIcon(u.icon), color: c, bg: C.accentSoft(u.color), size: 42),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(8, 12, 8, 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: grad),
+          border: Border.all(color: border.withOpacity(0.45)),
+        ),
+        child: Column(children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+            child: Icon(unitIcon(u.icon), color: titleC, size: 22),
+          ),
+          SizedBox(height: 8),
+          Text(u.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, height: 1.35, fontWeight: FontWeight.w600, color: Colors.white)),
           Spacer(),
-          if (Progress.unitScore(u.id) != null) Icon(Icons.workspace_premium_rounded, color: c, size: 20),
+          Text(Progress.unitScore(u.id) != null ? 'مكتمل ✓' : '${ar(done)}/${ar(u.lessons.length)} دروس',
+              style: TextStyle(fontSize: 10.5, color: subC)),
         ]),
-        Spacer(),
-        Text(u.title, style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
-        SizedBox(height: 3),
-        Text(u.sub, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: C.muted, height: 1.5)),
-        SizedBox(height: 8),
-        ProgressBar(value: done / u.lessons.length, color: c, height: 4),
-      ]),
+      ),
     );
   }
 
