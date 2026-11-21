@@ -19,6 +19,9 @@ class _Q {
   double? score;
   MatchResult? result;
   int hints = 0;
+  /// المستخدم ضغط «أظهر الآية»: من هنا كل قراءة تدريب ومابتتحسبش في الدرجة
+  bool revealed = false;
+  MatchResult? practice;
   _Q(this.ref, this.words, this.simple, this.given, this.firstLen);
 }
 
@@ -171,6 +174,20 @@ class _TestScreenState extends State<TestScreen> {
     final q = _q;
     final res = Matcher.match(q.simple, heard, givenCount: q.given + q.hints);
     Progress.touchToday();
+    if (q.revealed) {
+      // تدريب بعد إظهار الآية: بنوري النتيجة بس، والدرجة زي ما هي
+      setState(() {
+        _heard = heard;
+        q.practice = res;
+        _phase = _P.result;
+      });
+      if (heard.trim().isEmpty) {
+        Voice.cue('no_voice');
+      } else if (res.score >= 0.8) {
+        Voice.cue('recite_correct');
+      }
+      return;
+    }
     setState(() {
       _heard = heard;
       q.result = res;
@@ -187,10 +204,58 @@ class _TestScreenState extends State<TestScreen> {
     }
   }
 
+  /// «أظهر الآية»: تظهر كاملة والأخطاء بالأحمر، والشيخ يقرأها، وبعدين تردّدها تدريب (مابتتحسبش)
+  Future<void> _reveal() async {
+    final q = _q;
+    final run = ++_run;
+    await Ear.cancel();
+    await Voice.stop();
+    setState(() {
+      q.revealed = true;
+      q.score ??= 0;
+      q.result ??= Matcher.match(q.simple, '', givenCount: q.given + q.hints);
+      _phase = _P.sheikh;
+      _heard = '';
+    });
+    await _sheikhFull(run);
+    if (!mounted || run != _run) return;
+    await _listen(run);
+  }
+
+  /// الشيخ يقرأ الآية كاملة (والآية اللي بعدها لو داخلة في السؤال)
+  Future<void> _sheikhFull(int run) async {
+    final q = _q;
+    try {
+      await Sheikh.play(Progress.reciter, q.ref.s, q.ref.a);
+      if (!mounted || run != _run) return;
+      if (q.words.length > q.firstLen) await Sheikh.play(Progress.reciter, q.ref.s, q.ref.a + 1);
+    } catch (_) {
+      if (mounted) toast(context, 'تعذّر تشغيل صوت الشيخ — اقرأ الآية من الشاشة.');
+    }
+  }
+
+  /// إعادة التدريب بعد ما الآية ظهرت
+  Future<void> _practiceAgain() async {
+    final run = ++_run;
+    await Ear.cancel();
+    setState(() {
+      _q.practice = null;
+      _phase = _P.sheikh;
+      _heard = '';
+    });
+    await _sheikhFull(run);
+    if (!mounted || run != _run) return;
+    await _listen(run);
+  }
+
   void _skip() {
     _run++;
     Sheikh.stop();
     Ear.cancel();
+    if (_q.revealed) {
+      setState(() => _phase = _P.result);
+      return;
+    }
     setState(() {
       _q.score = 0;
       _q.result = Matcher.match(_q.simple, '', givenCount: _q.given + _q.hints);
@@ -296,7 +361,7 @@ class _TestScreenState extends State<TestScreen> {
             Expanded(
               child: Text(
                 _phase == _P.sheikh
-                    ? 'الشيخ يقرأ بداية الآية…'
+                    ? (q.revealed ? 'الشيخ يقرأ الآية…' : 'الشيخ يقرأ بداية الآية…')
                     : (listening ? 'أكمل الآية واقرأ التي بعدها' : 'النتيجة'),
                 style: TextStyle(color: C.muted, fontSize: 13.5),
               ),
@@ -308,15 +373,22 @@ class _TestScreenState extends State<TestScreen> {
             border: C.line2,
             radius: 24,
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: AyahView(words: q.words, result: _phase == _P.result ? q.result : null, hiddenFrom: shown, fontSize: 25),
+            child: AyahView(
+              words: q.words,
+              // بعد الإظهار: الآية كاملة بأخطاء المحاولة المحسوبة (أو التدريب لو اتعمل)
+              result: q.revealed ? (q.practice ?? q.result) : (_phase == _P.result ? q.result : null),
+              hiddenFrom: q.revealed ? -1 : shown,
+              revealAll: q.revealed,
+              fontSize: 25,
+            ),
           ),
           SizedBox(height: 14),
-          if (_phase == _P.result) _resultCard(q) else _tipCard(),
+          if (_phase == _P.result) _resultCard(q) else (q.revealed ? _practiceTip() : _tipCard()),
           if (listening && _heard.isNotEmpty) ...[
             SizedBox(height: 12),
             Text('أسمع: $_heard', textAlign: TextAlign.center, style: TextStyle(color: C.muted, height: 1.7)),
           ],
-          if (_phase != _P.result) ...[
+          if (_phase != _P.result && !q.revealed) ...[
             SizedBox(height: 12),
             Row(children: [
               Expanded(child: GoldButton(label: 'تلميح (كلمة)', outlined: true, height: 46, onPressed: _hint)),
@@ -329,10 +401,22 @@ class _TestScreenState extends State<TestScreen> {
       Padding(
         padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
         child: _phase == _P.result
-            ? Row(children: [
-                Expanded(child: GoldButton(label: 'أعد المحاولة', outlined: true, onPressed: _start)),
-                SizedBox(width: 10),
-                Expanded(flex: 2, child: GoldButton(label: _i + 1 >= _qs.length && !widget.placement ? 'عرض النتيجة' : 'السؤال التالي', onPressed: _nextQ)),
+            ? Column(mainAxisSize: MainAxisSize.min, children: [
+                if (!q.revealed && (q.score ?? 0) < 1) ...[
+                  GoldButton(label: 'أظهر الآية', icon: Icons.visibility_outlined, outlined: true, height: 46, onPressed: _reveal),
+                  SizedBox(height: 10),
+                ],
+                Row(children: [
+                  Expanded(
+                    child: GoldButton(
+                      label: q.revealed ? 'ردّدها تاني' : 'أعد المحاولة',
+                      outlined: true,
+                      onPressed: q.revealed ? _practiceAgain : _start,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(flex: 2, child: GoldButton(label: _i + 1 >= _qs.length && !widget.placement ? 'عرض النتيجة' : 'السؤال التالي', onPressed: _nextQ)),
+                ]),
               ])
             : Column(children: [
                 GestureDetector(
@@ -369,7 +453,41 @@ class _TestScreenState extends State<TestScreen> {
         ]),
       );
 
+  Widget _practiceTip() => Container(
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+            color: C.blueSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: C.line2)),
+        child: Row(children: [
+          Icon(Icons.school_outlined, color: C.blue, size: 20),
+          SizedBox(width: 10),
+          Expanded(
+              child: Text(
+                  _phase == _P.sheikh ? 'استمع للشيخ وهو يقرأ الآية…' : 'ردّد الآية بصوتك — دي محاولة تدريب ومابتتحسبش في الدرجة.',
+                  style: TextStyle(fontSize: 13, height: 1.6, color: C.text))),
+        ]),
+      );
+
   Widget _resultCard(_Q q) {
+    if (q.revealed) {
+      final p = q.practice;
+      final graded = ((q.score ?? 0) * 100).round();
+      final pp = p == null ? null : (p.score * 100).round();
+      return Panel(
+        color: C.blueSoft,
+        border: C.line2,
+        child: Row(children: [
+          Icon(Icons.school_outlined, color: C.blue),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              (pp == null ? 'الآية ظاهرة قدامك — راجع الكلمات الحمرا وردّدها.' : 'تدريب: ردّدت ${ar(pp)}٪ صح${pp >= 80 ? ' — أحسنت!' : '، راجع الحمرا وردّدها تاني.'}') +
+                  '\nدرجة السؤال: ${ar(graded)}٪ (محاولات التدريب مابتتحسبش).',
+              style: TextStyle(height: 1.6, fontSize: 13.5),
+            ),
+          ),
+        ]),
+      );
+    }
     final pct = ((q.score ?? 0) * 100).round();
     final good = pct >= 80;
     return Panel(
