@@ -5,6 +5,7 @@ import '../data/quran.dart';
 import '../data/progress.dart';
 import '../logic/matcher.dart';
 import '../logic/tajweed_rules.dart';
+import '../logic/letters.dart';
 import 'ayah_view.dart';
 
 /// لون الحكم مضبوط ليظهر واضحًا على الثيمات الفاتحة.
@@ -26,6 +27,8 @@ class TajweedAyahView extends StatefulWidget {
   /// تمييز موضع معيّن (للتمارين): [start, end).
   final (int, int)? focus;
   final bool dimRules;
+  /// النتيجة من المصحِّح الذكي: بنعلّم الحروف الغلط نفسها بالأحمر، والصحيح بالأخضر.
+  final bool letters;
   const TajweedAyahView({
     super.key,
     required this.ref,
@@ -36,6 +39,7 @@ class TajweedAyahView extends StatefulWidget {
     this.tappable = true,
     this.focus,
     this.dimRules = false,
+    this.letters = false,
   });
 
   @override
@@ -112,6 +116,7 @@ class _TajweedAyahViewState extends State<TajweedAyahView> {
         ayah: widget.showNumber ? widget.ref.a : null,
         result: res,
         fontSize: widget.fontSize,
+        letters: widget.letters,
       );
     }
     final useColors = widget.colors ?? Progress.tajweedColors;
@@ -135,6 +140,23 @@ class _TajweedAyahViewState extends State<TajweedAyahView> {
       WordState? st;
       if (res != null && wi < res.words.length) st = res.words[wi].state;
       final isErr = st == WordState.wrong || st == WordState.missing;
+      // الحروف الغلط داخل الكلمة (المصحِّح الذكي)
+      Set<int>? bad;
+      if (widget.letters && res != null && st == WordState.wrong && res.words[wi].heard != null) {
+        final b = Letters.badPositions(ta.text.substring(w.$1, w.$2), res.words[wi].heard!);
+        if (b.isNotEmpty) bad = b.map((k) => k + w.$1).toSet();
+      }
+      final badChars = <int>{};
+      if (bad != null) {
+        for (final k in bad) {
+          badChars.add(k);
+          var q = k + 1;
+          while (q < w.$2 && Letters.base(ta.text[q]) == null && ta.text[q] != ' ') {
+            badChars.add(q);
+            q++;
+          }
+        }
+      }
       TapGestureRecognizer? rec;
       if (widget.tappable && res == null) {
         rec = TapGestureRecognizer()..onTap = () => _showWord(ta, w);
@@ -143,13 +165,15 @@ class _TajweedAyahViewState extends State<TajweedAyahView> {
       var i = w.$1;
       while (i < w.$2) {
         final c = colors[i];
+        final inBad = badChars.contains(i);
         var j = i + 1;
-        while (j < w.$2 && colors[j] == c) {
+        while (j < w.$2 && colors[j] == c && badChars.contains(j) == inBad) {
           j++;
         }
         final inFocus = widget.focus != null && i < widget.focus!.$2 && j > widget.focus!.$1;
         Color col = c ?? C.text;
-        if (isErr) col = C.red;
+        if (isErr) col = bad == null ? C.red : (inBad ? C.red : C.text.withOpacity(0.85));
+        if (widget.letters && st == WordState.correct) col = C.green;
         if (widget.focus != null && !inFocus) col = col.withOpacity(0.45);
         if (inFocus) col = C.goldLight;
         spans.add(TextSpan(
@@ -160,7 +184,7 @@ class _TajweedAyahViewState extends State<TajweedAyahView> {
             decoration: isErr || inFocus ? TextDecoration.underline : null,
             decorationColor: isErr ? C.red : C.gold,
             decorationStyle: isErr ? TextDecorationStyle.wavy : TextDecorationStyle.solid,
-            backgroundColor: inFocus ? C.gold.withOpacity(0.12) : null,
+            backgroundColor: inFocus ? C.gold.withOpacity(0.12) : (inBad ? C.red.withOpacity(0.14) : null),
           ),
         ));
         i = j;

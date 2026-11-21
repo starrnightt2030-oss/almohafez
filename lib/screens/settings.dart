@@ -6,6 +6,7 @@ import '../services/voice.dart';
 import '../services/updater.dart';
 import '../widgets/update_dialog.dart';
 import 'about.dart';
+import '../services/quran_ear.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -221,6 +222,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: Text(r.name, style: TextStyle(fontSize: 14.5)),
                 subtitle: Text(r.note, style: TextStyle(fontSize: 11.5, color: C.muted)),
               ),
+          ]),
+        ),
+        SizedBox(height: 18),
+        SectionTitle('المصحِّح الذكي'),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(
+              'يسمع تلاوتك على الموبايل نفسه بدون إنترنت، ويقارنها بالآية حرفًا حرفًا، ويفتح الميكروفون وحده بعد الشيخ ويقفله وحده عند آخر الآية.',
+              style: TextStyle(fontSize: 12.5, color: C.muted, height: 1.7),
+            ),
+            SizedBox(height: 10),
+            ValueListenableBuilder<double?>(
+              valueListenable: QuranEar.progress,
+              builder: (_, p, __) {
+                if (p != null) {
+                  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text('جاري التحميل… ${ar((p * 100).round())}٪', style: TextStyle(fontSize: 13)),
+                    SizedBox(height: 6),
+                    ProgressBar(value: p),
+                  ]);
+                }
+                return FutureBuilder<bool>(
+                  future: QuranEar.checkInstalled(),
+                  builder: (_, snap) {
+                    final ok = snap.data ?? false;
+                    return Row(children: [
+                      Icon(ok ? Icons.check_circle_rounded : Icons.download_rounded, color: ok ? C.green : C.gold, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                          child: Text(ok ? 'جاهز ويعمل بدون إنترنت' : 'غير محمّل بعد (${ar((QuranEar.totalBytes / 1048576).round())} م.ب، مرة واحدة)',
+                              style: TextStyle(fontSize: 13))),
+                      if (!ok)
+                        TextButton(
+                          onPressed: () async {
+                            final done = await QuranEar.download();
+                            if (!mounted) return;
+                            setState(() {});
+                            toast(context, done ? 'المصحِّح الذكي جاهز' : 'تعذّر التحميل، تأكد من الإنترنت وحاول مرة أخرى');
+                          },
+                          child: Text('تحميل'),
+                        ),
+                    ]);
+                  },
+                );
+              },
+            ),
+            Divider(color: C.line),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: Progress.smartEar,
+              onChanged: (v) async {
+                await Progress.setSmartEar(v);
+                setState(() {});
+              },
+              title: Text('استخدام المصحِّح الذكي في الحفظ'),
+              subtitle: Text('لو أوقفته يُستخدم التعرف على الصوت من Google', style: TextStyle(fontSize: 11.5, color: C.muted)),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: Progress.strictRecite,
+              onChanged: (v) async {
+                await Progress.setStrictRecite(v);
+                setState(() {});
+              },
+              title: Text('تصحيح صارم'),
+              subtitle: Text('أي حرف مختلف يُحسب خطأ حتى في الكلمات الطويلة', style: TextStyle(fontSize: 11.5, color: C.muted)),
+            ),
           ]),
         ),
         SizedBox(height: 18),

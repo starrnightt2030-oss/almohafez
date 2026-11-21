@@ -7,6 +7,8 @@ import '../data/reciters.dart';
 import '../logic/matcher.dart';
 import '../services/audio.dart';
 import '../services/speech.dart';
+import '../services/quran_ear.dart';
+import '../logic/letters.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/services.dart';
 import '../services/voice.dart';
@@ -43,6 +45,9 @@ class _HifzSessionState extends State<HifzSession> {
   int _passed = 0;
   final _confetti = ConfettiController(duration: Duration(milliseconds: 1200));
   bool _tjReady = TajweedData.ready;
+  /// المحاولة الحالية بالمصحِّح الذكي (على الجهاز)
+  bool _smart = false;
+  bool _speaking = false;
 
   Surah get _su => QuranData.surah(widget.surah);
   AyahRef get _ref => AyahRef(widget.surah, _a);
@@ -55,6 +60,14 @@ class _HifzSessionState extends State<HifzSession> {
       if (!widget.single) await Voice.cue('session_start');
       if (mounted) _runAyah();
     });
+    // المصحِّح الذكي: لو مش متحمّل يتحمّل في الخلفية مرة واحدة، ولحد ما يجهز بنستخدم التعرف العادي
+    if (Progress.smartEar) {
+      QuranEar.checkInstalled().then((ok) async {
+        if (!ok) ok = await QuranEar.download();
+        if (ok) await QuranEar.warmUp();
+        if (mounted) setState(() {});
+      });
+    }
     if (!_tjReady) {
       TajweedData.load().then((_) {
         if (mounted) setState(() => _tjReady = true);
@@ -68,6 +81,7 @@ class _HifzSessionState extends State<HifzSession> {
     _timer?.cancel();
     Sheikh.stop();
     Ear.cancel();
+    QuranEar.cancel();
     Voice.stop();
     _confetti.dispose();
     super.dispose();
@@ -83,6 +97,7 @@ class _HifzSessionState extends State<HifzSession> {
     final run = ++_run;
     _cancelCountdown();
     await Ear.cancel();
+    await QuranEar.cancel();
     await Voice.stop();
     setState(() {
       _phase = Phase.sheikh;
@@ -113,6 +128,38 @@ class _HifzSessionState extends State<HifzSession> {
       await Voice.yourTurn();
       if (!mounted || run != _run) return;
     }
+    // ١) المصحِّح الذكي: بيسمع الحروف، ويقفل وحده أول ما توصل لآخر الآية
+    if (Progress.smartEar && QuranEar.installed && await QuranEar.warmUp()) {
+      if (!mounted || run != _run) return;
+      final simple = QuranData.simpleWords(_ref);
+      final uth = QuranData.uthmaniText(_ref);
+      setState(() {
+        _smart = true;
+        _speaking = false;
+        _phase = Phase.user;
+        _heard = '';
+        _result = null;
+      });
+      final started = await QuranEar.listen(
+        onLive: (t) {
+          if (!mounted || run != _run) return;
+          setState(() {
+            _heard = t;
+            _result = Letters.match(simple, uth, t, strict: Progress.strictRecite, live: true);
+          });
+        },
+        onSpeech: (on) {
+          if (mounted && run == _run) setState(() => _speaking = on);
+        },
+        isComplete: (t) => Letters.reachedEnd(Letters.match(simple, uth, t, strict: Progress.strictRecite, live: true)),
+        onDone: (t) {
+          if (mounted && run == _run) _evaluate(t, run);
+        },
+      );
+      if (started || !mounted || run != _run) return;
+    }
+    // ٢) التعرف العادي (Google) لو المصحِّح الذكي مش متاح
+    _smart = false;
     final ok = await Ear.init();
     if (!mounted || run != _run) return;
     if (!ok) {
@@ -140,7 +187,9 @@ class _HifzSessionState extends State<HifzSession> {
   }
 
   void _evaluate(String heard, int run) {
-    final res = Matcher.match(QuranData.simpleWords(_ref), heard);
+    final res = _smart
+        ? Letters.match(QuranData.simpleWords(_ref), QuranData.uthmaniText(_ref), heard, strict: Progress.strictRecite)
+        : Matcher.match(QuranData.simpleWords(_ref), heard);
     Progress.touchToday();
     setState(() {
       _heard = heard;
@@ -326,7 +375,7 @@ class _HifzSessionState extends State<HifzSession> {
       for (var i = 0; i < words.length; i++) {
         final w = r.words[i];
         if (w.state == WordState.wrong || w.state == WordState.missing) {
-          errors.add(_errorNote(words[i], Matcher.note(QuranData.simpleWords(_ref)[i], w)));
+          errors.add(_errorNote(words[i], _smart ? _smartNote(words[i], w) : Matcher.note(QuranData.simpleWords(_ref)[i], w)));
         }
       }
     }
@@ -347,6 +396,7 @@ class _HifzSessionState extends State<HifzSession> {
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: _sheikhCard(),
           ),
+          _smartBanner(),
           Expanded(
             child: Container(
               margin: EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -376,10 +426,11 @@ class _HifzSessionState extends State<HifzSession> {
                         key: ValueKey('${widget.surah}:$_a:$_tjReady'),
                         ref: _ref,
                         result: _heard.trim().isEmpty ? null : r,
+                        letters: _smart,
                         fontSize: 27),
                   if (!hide && _result == null) ...[SizedBox(height: 10), TajweedLegend()],
                   if (errors.isNotEmpty) ...[SizedBox(height: 10), ...errors],
-                  if (_phase == Phase.user && _heard.isNotEmpty) ...[
+                  if (_phase == Phase.user && !_smart && _heard.isNotEmpty) ...[
                     SizedBox(height: 12),
                     Text('أسمع: $_heard',
                         textAlign: TextAlign.center, style: TextStyle(color: C.muted, fontSize: 13, height: 1.7)),
@@ -455,6 +506,46 @@ class _HifzSessionState extends State<HifzSession> {
     );
   }
 
+  /// ملاحظة التصحيح بالحروف (المصحِّح الذكي)
+  String _smartNote(String word, WordResult w) {
+    if (w.state == WordState.missing) return 'لم أسمع هذه الكلمة. اقرأها بوضوح ولا تتجاوزها.';
+    final h = w.heard ?? '';
+    final bad = Letters.badPositions(word, h);
+    final letters = <String>[];
+    for (final k in bad) {
+      final b = Letters.base(word[k]);
+      if (b != null && !letters.contains(b)) letters.add(b);
+    }
+    final which = letters.isEmpty ? '' : ' — انتبه لحرف ${letters.map((x) => '«$x»').join(' و')}';
+    return 'سمعتُها «$h»$which. استمع للشيخ في هذه الكلمة وكرّرها ٣ مرات.';
+  }
+
+  Widget _smartBanner() {
+    return ValueListenableBuilder<double?>(
+      valueListenable: QuranEar.progress,
+      builder: (_, p, __) {
+        if (p == null) return SizedBox.shrink();
+        return Padding(
+          padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+          child: Panel(
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            radius: 16,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                Icon(Icons.auto_awesome_rounded, color: C.gold, size: 18),
+                SizedBox(width: 8),
+                Expanded(child: Text('تجهيز المصحِّح الذكي (مرة واحدة · ${ar(((QuranEar.totalBytes / 1048576)).round())} م.ب)', style: TextStyle(fontSize: 12.5))),
+                Text('${ar((p * 100).round())}٪', style: TextStyle(fontSize: 12, color: C.gold, fontWeight: FontWeight.w600)),
+              ]),
+              SizedBox(height: 8),
+              ProgressBar(value: p, height: 5),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _errorNote(String word, String note) {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -481,7 +572,11 @@ class _HifzSessionState extends State<HifzSession> {
           GestureDetector(
             onTap: () {
               if (listening) {
-                Ear.stop();
+                if (_smart) {
+                  QuranEar.finishNow();
+                } else {
+                  Ear.stop();
+                }
               } else {
                 _listen();
               }
@@ -507,7 +602,11 @@ class _HifzSessionState extends State<HifzSession> {
         ]),
         SizedBox(height: 10),
         Text(
-          listening ? 'أستمع إليك… اضغط للإنهاء عند الانتهاء' : 'اضغط الميكروفون لتقرأ مباشرة',
+          listening
+              ? (_smart
+                  ? (_speaking ? 'أستمع إليك… الكلمات الصحيحة تخضرّ وأنت تقرأ' : 'اقرأ الآية — سأنهي وحدي عند آخرها')
+                  : 'أستمع إليك… اضغط للإنهاء عند الانتهاء')
+              : 'اضغط الميكروفون لتقرأ مباشرة',
           style: TextStyle(fontSize: 12.5, color: C.muted),
         ),
       ]),

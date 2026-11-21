@@ -93,6 +93,14 @@ class Progress {
   static bool get introSeen => (_p.getBool('intro') ?? false) || memTotal > 0 || xp > 0;
   static Future<void> setIntroSeen() => _p.setBool('intro', true);
 
+  /// المصحِّح الذكي: صارم = أي حرف مختلف غلطة (حتى في الكلمات الطويلة)
+  static bool get strictRecite => _p.getBool('strict') ?? false;
+  static Future<void> setStrictRecite(bool v) => _p.setBool('strict', v);
+
+  /// استخدام المصحِّح الذكي (على الجهاز) بدل التعرف من Google
+  static bool get smartEar => _p.getBool('smartEar') ?? true;
+  static Future<void> setSmartEar(bool v) => _p.setBool('smartEar', v);
+
   static String get reciter => _p.getString('reciter') ?? 'Husary_Muallim_128kbps';
   static Future<void> setReciter(String v) => _p.setString('reciter', v);
 
