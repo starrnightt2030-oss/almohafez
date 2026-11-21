@@ -96,7 +96,7 @@ class _HifzSessionState extends State<HifzSession> {
       } catch (_) {
         if (!mounted || run != _run) return;
         setState(() => _phase = Phase.idle);
-        toast(context, 'تعذّر تشغيل التلاوة. تأكد من اتصالك بالإنترنت.');
+        toast(context, 'تعذّر تشغيل صوت الشيخ. تأكد من الإنترنت وارفع صوت الوسائط، ثم اضغط «استمع للشيخ».');
         return;
       }
       if (!mounted || run != _run) return;
