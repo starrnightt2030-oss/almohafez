@@ -1,7 +1,7 @@
 name: almohafez
 description: "المحفظ — تعلّم التجويد واحفظ القرآن الكريم وتفقّه في دينك"
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -16,6 +16,11 @@ dependencies:
   shared_preferences: ^2.3.2
   share_plus: ^10.1.0
   path_provider: ^2.1.4
+  flutter_animate: ^4.5.0
+  flutter_tts: ^4.2.0
+  confetti: ^0.8.0
+  http: ^1.2.2
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.1
@@ -32,6 +37,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/quran/
+    - assets/audio/lessons/
+    - assets/audio/voice/
+    - assets/audio/quiz/
+    - assets/audio/hadith/
   fonts:
     - family: Readex
       fonts:
@@ -46,6 +55,11 @@ flutter:
     - family: AmiriQuran
       fonts:
         - asset: assets/fonts/AmiriQuran.ttf
+    - family: Ruqaa
+      fonts:
+        - asset: assets/fonts/ArefRuqaa-Regular.ttf
+        - asset: assets/fonts/ArefRuqaa-Bold.ttf
+          weight: 700
     - family: Amiri
       fonts:
         - asset: assets/fonts/Amiri-Regular.ttf
