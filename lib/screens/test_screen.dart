@@ -6,6 +6,8 @@ import '../data/progress.dart';
 import '../logic/matcher.dart';
 import '../services/audio.dart';
 import '../services/speech.dart';
+import '../services/quran_ear.dart';
+import '../logic/letters.dart';
 import '../services/voice.dart';
 import '../widgets/ayah_view.dart';
 import 'certificate.dart';
@@ -22,7 +24,9 @@ class _Q {
   /// المستخدم ضغط «أظهر الآية»: من هنا كل قراءة تدريب ومابتتحسبش في الدرجة
   bool revealed = false;
   MatchResult? practice;
-  _Q(this.ref, this.words, this.simple, this.given, this.firstLen);
+  /// صور الكلمات للمصحِّح الذكي (الآية + اللي بعدها لو موجودة)
+  final List<Set<String>> forms;
+  _Q(this.ref, this.words, this.simple, this.given, this.firstLen, this.forms);
 }
 
 enum _P { sheikh, user, result }
@@ -81,6 +85,7 @@ class _TestScreenState extends State<TestScreen> {
     _run++;
     Sheikh.stop();
     Ear.cancel();
+    QuranEar.cancel();
     Voice.stop();
     super.dispose();
   }
@@ -115,20 +120,25 @@ class _TestScreenState extends State<TestScreen> {
     final words = [...dw];
     words[words.length - 1] = '${words.last} ۝${ar(r.a)}';
     final simple = [...sw];
+    final forms = Letters.forms(sw, QuranData.uthmaniText(r));
     if (next != null && n - k <= 25) {
       final dn = [...QuranData.displayWords(next)];
       dn[dn.length - 1] = '${dn.last} ۝${ar(next.a)}';
       words.addAll(dn);
-      simple.addAll(QuranData.simpleWords(next));
+      final ns = QuranData.simpleWords(next);
+      simple.addAll(ns);
+      forms.addAll(Letters.forms(ns, QuranData.uthmaniText(next)));
     }
-    return _Q(r, words, simple, k, n);
+    return _Q(r, words, simple, k, n, forms);
   }
 
   _Q get _q => _qs[_i];
+  bool _smart = false;
 
   Future<void> _start() async {
     final run = ++_run;
     await Ear.cancel();
+    await QuranEar.cancel();
     await Voice.stop();
     setState(() {
       _phase = _P.sheikh;
@@ -148,6 +158,28 @@ class _TestScreenState extends State<TestScreen> {
   Future<void> _listen([int? runId]) async {
     final run = runId ?? ++_run;
     await Sheikh.stop();
+    // المصحِّح الذكي لو جاهز: بيقفل وحده عند آخر الآية التالية
+    if (Progress.smartEar && QuranEar.installed && await QuranEar.warmUp()) {
+      if (!mounted || run != _run) return;
+      final q = _q;
+      setState(() {
+        _smart = true;
+        _phase = _P.user;
+        _heard = '';
+      });
+      final started = await QuranEar.listen(
+        onLive: (t) {
+          if (mounted && run == _run) setState(() => _heard = t);
+        },
+        isComplete: (t) => Letters.reachedEnd(Letters.matchForms(q.forms, t, strict: Progress.strictRecite, live: true)),
+        onDone: (t) {
+          if (mounted && run == _run) _evaluate(t);
+        },
+        noVoice: Duration(seconds: 12),
+      );
+      if (started || !mounted || run != _run) return;
+    }
+    _smart = false;
     final ok = await Ear.init();
     if (!mounted || run != _run) return;
     if (!ok) {
@@ -172,7 +204,9 @@ class _TestScreenState extends State<TestScreen> {
 
   void _evaluate(String heard) {
     final q = _q;
-    final res = Matcher.match(q.simple, heard, givenCount: q.given + q.hints);
+    final res = _smart
+        ? Letters.matchForms(q.forms, heard, strict: Progress.strictRecite, givenCount: q.given + q.hints)
+        : Matcher.match(q.simple, heard, givenCount: q.given + q.hints);
     Progress.touchToday();
     if (q.revealed) {
       // تدريب بعد إظهار الآية: بنوري النتيجة بس، والدرجة زي ما هي
@@ -209,6 +243,7 @@ class _TestScreenState extends State<TestScreen> {
     final q = _q;
     final run = ++_run;
     await Ear.cancel();
+    await QuranEar.cancel();
     await Voice.stop();
     setState(() {
       q.revealed = true;
@@ -238,6 +273,7 @@ class _TestScreenState extends State<TestScreen> {
   Future<void> _practiceAgain() async {
     final run = ++_run;
     await Ear.cancel();
+    await QuranEar.cancel();
     setState(() {
       _q.practice = null;
       _phase = _P.sheikh;
@@ -252,6 +288,7 @@ class _TestScreenState extends State<TestScreen> {
     _run++;
     Sheikh.stop();
     Ear.cancel();
+    QuranEar.cancel();
     if (_q.revealed) {
       setState(() => _phase = _P.result);
       return;
@@ -379,6 +416,7 @@ class _TestScreenState extends State<TestScreen> {
               result: q.revealed ? (q.practice ?? q.result) : (_phase == _P.result ? q.result : null),
               hiddenFrom: q.revealed ? -1 : shown,
               revealAll: q.revealed,
+              letters: _smart,
               fontSize: 25,
             ),
           ),
@@ -420,7 +458,7 @@ class _TestScreenState extends State<TestScreen> {
               ])
             : Column(children: [
                 GestureDetector(
-                  onTap: () => listening ? Ear.stop() : _listen(),
+                  onTap: () => listening ? (_smart ? QuranEar.finishNow() : Ear.stop()) : _listen(),
                   child: Container(
                     width: 82,
                     height: 82,
@@ -433,7 +471,7 @@ class _TestScreenState extends State<TestScreen> {
                   ),
                 ),
                 SizedBox(height: 8),
-                Text(listening ? 'اضغط عند الانتهاء' : 'اضغط وابدأ القراءة من حفظك',
+                Text(listening ? (_smart ? 'أكمل من حفظك — سأنهي وحدي عند آخر الآية' : 'اضغط عند الانتهاء') : 'اضغط وابدأ القراءة من حفظك',
                     style: TextStyle(color: C.muted, fontSize: 12.5)),
               ]),
       ),

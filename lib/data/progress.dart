@@ -99,6 +99,40 @@ class Progress {
   static Future<void> setDailyGoal(int v) => _p.setInt('goal', v);
   static int get lessonsPassed => _lessons.length;
 
+  /// آيات جديدة في يوم معيّن
+  static int newOn(DateTime d) => _p.getInt('dm_${_key(d)}') ?? 0;
+
+  /// الآيات اللي بيتكرر فيها الغلط (للتقرير الأسبوعي والمراجعة)
+  static Map<String, int> get mistakes {
+    final raw = _p.getString('mistakes');
+    if (raw == null) return {};
+    return (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as int));
+  }
+
+  static Future<void> addMistake(AyahRef r) async {
+    final m = mistakes;
+    final k = '${r.s}:${r.a}';
+    m[k] = (m[k] ?? 0) + 1;
+    await _p.setString('mistakes', jsonEncode(m));
+  }
+
+  static Future<void> clearMistake(AyahRef r) async {
+    final m = mistakes;
+    if (m.remove('${r.s}:${r.a}') != null) await _p.setString('mistakes', jsonEncode(m));
+  }
+
+  /// التذكير اليومي (دقيقة من بداية اليوم، أو -1 = مقفول)
+  static int get reminderMinute => _p.getInt('remind') ?? 20 * 60;
+  static Future<void> setReminderMinute(int v) => _p.setInt('remind', v);
+
+  static int get badgesSeen => _p.getInt('badgesSeen') ?? 0;
+  static Future<void> setBadgesSeen(int v) => _p.setInt('badgesSeen', v);
+  static bool get goalCheered => _p.getString('goalCheered') == _key(DateTime.now());
+  static Future<void> setGoalCheered() => _p.setString('goalCheered', _key(DateTime.now()));
+
+  static bool get notifAsked => _p.getBool('notifAsked') ?? false;
+  static Future<void> setNotifAsked() => _p.setBool('notifAsked', true);
+
   static String? get name => _p.getString('name');
   static Future<void> setName(String v) => _p.setString('name', v.trim());
 

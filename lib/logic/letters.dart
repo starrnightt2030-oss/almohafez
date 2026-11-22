@@ -106,8 +106,11 @@ class Letters {
   }
 
   /// محاذاة ما سُمع بكلمات الآية. [live] = أثناء القراءة: الكلمات اللي لسه ماوصلهاش تفضل «منتظرة» مش «ناقصة».
-  static MatchResult match(List<String> simple, String uthmani, String heard, {bool strict = false, bool live = false}) {
-    final f = forms(simple, uthmani);
+  static MatchResult match(List<String> simple, String uthmani, String heard, {bool strict = false, bool live = false}) =>
+      matchForms(forms(simple, uthmani), heard, strict: strict, live: live);
+
+  /// نفس المطابقة لكن على صور جاهزة (مثلًا آيتين ورا بعض في اختبار «كمّل الآية»).
+  static MatchResult matchForms(List<Set<String>> f, String heard, {bool strict = false, bool live = false, int givenCount = 0}) {
     final h = heard.split(RegExp(r'\s+')).map(fold).where((w) => w.isNotEmpty).toList();
     final n = f.length, m = h.length;
     const inf = 1 << 30;
@@ -184,6 +187,9 @@ class Letters {
       } else {
         break; // مايحصلش
       }
+    }
+    for (var k = 0; k < givenCount && k < n; k++) {
+      res[k] = WordResult(WordState.given);
     }
     return MatchResult(res, extra.reversed.toList());
   }

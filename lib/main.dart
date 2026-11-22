@@ -7,6 +7,9 @@ import 'data/quran.dart';
 import 'data/progress.dart';
 import 'data/course.dart';
 import 'services/voice.dart';
+import 'services/quran_ear.dart';
+import 'services/reminders.dart';
+import 'screens/weekly_report.dart';
 import 'screens/home.dart';
 import 'screens/surah_list.dart';
 import 'screens/tajweed.dart';
@@ -353,6 +356,23 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // التحديث التلقائي: بعد ما التطبيق يفتح بثانيتين، وكل ما يرجع من الخلفية (مرة كل ٣ ساعات بالكتير)
     Future.delayed(Duration(seconds: 2), _autoCheck);
+    // التذكيرات: أول مرة نطلب الإذن، وبعدين نجدول، ولو اتفتح من إشعار التقرير نفتحه
+    Future.delayed(Duration(seconds: 3), () async {
+      await Reminders.init();
+      if (!Progress.notifAsked) {
+        await Progress.setNotifAsked();
+        await Reminders.askPermission();
+      }
+      await Reminders.reschedule();
+      if (Reminders.launchPayload == 'weekly' && mounted) {
+        Reminders.launchPayload = null;
+        Navigator.of(context).push(fadeRoute(WeeklyReportScreen()));
+      }
+    });
+    // المصحِّح الذكي يتحمّل في الخلفية مرة واحدة (١٩ م.ب) عشان يبقى جاهز في الحفظ والاختبارات
+    Future.delayed(Duration(seconds: 6), () async {
+      if (Progress.smartEar && !await QuranEar.checkInstalled()) await QuranEar.download();
+    });
   }
 
   @override
@@ -364,6 +384,8 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _autoCheck();
+    // لما يخرج من التطبيق: نعيد جدولة التذكيرات (لو اتحفظ النهارده يتلغي تنبيه السلسلة)
+    if (state == AppLifecycleState.paused) Reminders.reschedule();
   }
 
   void _autoCheck() {

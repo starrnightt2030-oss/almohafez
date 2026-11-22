@@ -7,6 +7,7 @@ import '../services/updater.dart';
 import '../widgets/update_dialog.dart';
 import 'about.dart';
 import '../services/quran_ear.dart';
+import '../services/reminders.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -225,6 +226,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
         ),
         SizedBox(height: 18),
+        SectionTitle('التذكير اليومي'),
+        Panel(
+          child: Column(children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: Progress.reminderMinute >= 0,
+              onChanged: (v) async {
+                if (v) await Reminders.askPermission();
+                await Progress.setReminderMinute(v ? 20 * 60 : -1);
+                await Reminders.reschedule();
+                setState(() {});
+              },
+              title: Text('ذكّرني بوِردي كل يوم'),
+              subtitle: Text('وتنبيه لو سلسلتك هتنقطع، وتقرير كل جمعة', style: TextStyle(fontSize: 11.5, color: C.muted)),
+            ),
+            if (Progress.reminderMinute >= 0)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.alarm_rounded, color: C.gold),
+                title: Text('ميعاد التذكير'),
+                trailing: Text(_fmtTime(Progress.reminderMinute), style: TextStyle(color: C.gold, fontWeight: FontWeight.w600)),
+                onTap: () async {
+                  final m = Progress.reminderMinute;
+                  final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
+                  if (t == null) return;
+                  await Progress.setReminderMinute(t.hour * 60 + t.minute);
+                  await Reminders.reschedule();
+                  if (mounted) setState(() {});
+                },
+              ),
+          ]),
+        ),
+        SizedBox(height: 18),
         SectionTitle('المصحِّح الذكي'),
         Panel(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -312,4 +346,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ]),
     );
   }
+}
+
+String _fmtTime(int m) {
+  final h = m ~/ 60, mi = m % 60;
+  final h12 = h % 12 == 0 ? 12 : h % 12;
+  return '${ar(h12)}:${ar(mi.toString().padLeft(2, '0'))} ${h < 12 ? 'صباحًا' : 'مساءً'}';
 }

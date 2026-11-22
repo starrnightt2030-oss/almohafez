@@ -192,6 +192,13 @@ class _HifzSessionState extends State<HifzSession> {
         ? Letters.match(QuranData.simpleWords(_ref), QuranData.uthmaniText(_ref), heard, strict: Progress.strictRecite)
         : Matcher.match(QuranData.simpleWords(_ref), heard);
     Progress.touchToday();
+    if (heard.trim().isNotEmpty) {
+      if (res.score >= 1) {
+        if (_attempt == 0) Progress.clearMistake(_ref);
+      } else {
+        Progress.addMistake(_ref);
+      }
+    }
     setState(() {
       _heard = heard;
       _result = res;
@@ -225,7 +232,15 @@ class _HifzSessionState extends State<HifzSession> {
       () async {
         if (Voice.hasCue('recite_wrong')) {
           final onlyMissing = res.words.every((w) => w.state != WordState.wrong);
-          await Voice.cue(onlyMissing ? 'recite_missing' : 'recite_wrong');
+          // حرف واحد بس غلط في كلمة واحدة (المصحِّح الذكي) ← «قريبة جدًا»
+          final bad = res.words.where((w) => w.state == WordState.wrong || w.state == WordState.missing).toList();
+          var almost = false;
+          if (_smart && bad.length == 1 && bad.first.state == WordState.wrong && bad.first.heard != null) {
+            final i = res.words.indexOf(bad.first);
+            final dw = QuranData.simpleWords(_ref);
+            if (i >= 0 && i < dw.length) almost = Letters.badPositions(dw[i], bad.first.heard!).length == 1;
+          }
+          await Voice.cue(almost ? 'recite_almost' : (onlyMissing ? 'recite_missing' : 'recite_wrong'));
           if (mounted && run == _run && _autoRepeat) await Voice.cue('sheikh_repeat');
         } else {
           await Voice.say(_feedbackSpeech(res));

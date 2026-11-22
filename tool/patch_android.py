@@ -1,14 +1,35 @@
 """يضبط مشروع أندرويد المُولَّد: الأذونات واسم التطبيق وخدمة التعرف على الصوت،
 والتوقيع بمفتاح ثابت (لازم عشان التحديثات تتثبت فوق النسخة القديمة من غير ما تمسحها)."""
-import re, pathlib, shutil, sys
+import re, pathlib, shutil, sys, os
 
 m = pathlib.Path('android/app/src/main/AndroidManifest.xml')
 x = m.read_text(encoding='utf-8')
 perms = ('    <uses-permission android:name="android.permission.INTERNET"/>\n'
          '    <uses-permission android:name="android.permission.RECORD_AUDIO"/>\n'
          '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n')
+perms += '    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n'
+if os.environ.get('STORE') == '1':
+    # نسخة جوجل بلاي: مفيش تثبيت تحديثات من جوّه التطبيق (ممنوع في سياسة المتجر)
+    perms = perms.replace('    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n', '')
 if 'RECORD_AUDIO' not in x:
     x = x.replace('<application', perms + '    <application', 1)
+# التذكيرات المجدولة (flutter_local_notifications)
+receivers = ('        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />\n'
+             '        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">\n'
+             '            <intent-filter>\n'
+             '                <action android:name="android.intent.action.BOOT_COMPLETED"/>\n'
+             '                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>\n'
+             '                <action android:name="android.intent.action.QUICKBOOT_POWERON" />\n'
+             '                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>\n'
+             '            </intent-filter>\n'
+             '        </receiver>\n')
+if 'ScheduledNotificationReceiver' not in x:
+    x = x.replace('    </application>', receivers + '    </application>', 1)
+# أيقونة الإشعار (بيضا شفافة)
+for src in pathlib.Path('tool/android/res').glob('drawable-*/ic_stat_sanad.png'):
+    dst = pathlib.Path('android/app/src/main/res') / src.parent.name / src.name
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(src, dst)
 x = re.sub(r'android:label="[^"]*"', 'android:label="سند"', x, count=1)
 intent = ('        <intent>\n'
           '            <action android:name="android.speech.RecognitionService" />\n'
@@ -36,6 +57,14 @@ for name in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
     if not p.exists():
         continue
     g = p.read_text(encoding='utf-8')
+    # desugaring (مطلوب لـ flutter_local_notifications)
+    if 'CoreLibraryDesugaring' not in g and 'coreLibraryDesugaring' not in g:
+        if name.endswith('.kts'):
+            g = re.sub(r'(compileOptions\s*\{)', r'\1\n        isCoreLibraryDesugaringEnabled = true', g, count=1)
+            g += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+        else:
+            g = re.sub(r'(compileOptions\s*\{)', r'\1\n        coreLibraryDesugaringEnabled true', g, count=1)
+            g += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
     g = re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 23', g)
     g = re.sub(r'minSdkVersion\s+flutter\.minSdkVersion', 'minSdkVersion 23', g)
     if name.endswith('.kts'):

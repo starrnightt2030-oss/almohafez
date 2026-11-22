@@ -23,6 +23,8 @@ dependencies:
   open_filex: ^4.5.0
   sherpa_onnx: ^2.0.0
   record: ^6.1.1
+  flutter_local_notifications: ^23.0.0
+  timezone: ^0.11.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.1

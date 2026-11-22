@@ -8,6 +8,7 @@ import '../logic/drill.dart';
 import 'lesson.dart';
 import 'test_screen.dart';
 import 'certificate.dart';
+import 'weekly_report.dart';
 import '../services/voice.dart';
 
 /// المسابقات: تحدي اليوم، مسابقات حسب الفرع، والمجموعات (قريبًا).
@@ -52,6 +53,22 @@ class _ArenaScreenState extends State<ArenaScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // وسام جديد أو هدف اليوم اكتمل ← تهنئة بالصوت (مرة واحدة)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final earned = _badges().where((b) => b.$3).length;
+      if (earned > Progress.badgesSeen) {
+        await Progress.setBadgesSeen(earned);
+        Voice.cue('badge');
+      } else if (Progress.todayNew >= Progress.dailyGoal && !Progress.goalCheered) {
+        await Progress.setGoalCheered();
+        Voice.cue('goal_done');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final r = math.Random();
     return ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 28), children: [
@@ -91,6 +108,16 @@ class _ArenaScreenState extends State<ArenaScreen> {
           if (mounted) setState(() {});
         },
       ).enter(5),
+      SizedBox(height: 10),
+      GoldButton(
+        label: 'تقرير الأسبوع',
+        icon: Icons.insights_rounded,
+        outlined: true,
+        onPressed: () async {
+          await go(context, WeeklyReportScreen());
+          if (mounted) setState(() {});
+        },
+      ).enter(6),
       SizedBox(height: 18),
       SectionTitle('المسابقات'),
       Panel(
