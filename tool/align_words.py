@@ -121,8 +121,12 @@ def silences(wav, noise='-38dB', d=0.12):
 
 def main():
     wdir = sys.argv[1]
-    wavs = sys.argv[2:]
-    scripts = [f for f in IDX['files'] if f['file'].startswith('سند_صوت_')]
+    # كل وسيط: wav أو words.json::wav
+    pairs_in = [a.split('::') if '::' in a else (f'part{i}.words.json', a) for i, a in enumerate(sys.argv[2:], 1)]
+    jsons = [p[0] for p in pairs_in]
+    wavs = [p[1] for p in pairs_in]
+    prefix = os.environ.get('PREFIX', 'سند_صوت_')
+    scripts = [f for f in IDX['files'] if f['file'].startswith(prefix)]
     report = []
     global susp, missing, START
     import time
@@ -133,7 +137,7 @@ def main():
     sc = {f['file']: Counter(sum((words_of(x['text']) for x in f['segments']), [])) for f in scripts}
     pairs = []
     for k, wav in enumerate(wavs, 1):
-        Tw = Counter(f for f in (fold(w[2]) for w in json.load(open(os.path.join(wdir, f'part{k}.words.json'), encoding='utf-8'))) if f)
+        Tw = Counter(f for f in (fold(w[2]) for w in json.load(open(os.path.join(wdir, jsons[k - 1]), encoding='utf-8'))) if f)
         for f in scripts:
             inter = sum((Tw & sc[f['file']]).values())
             pairs.append((inter / max(1, sum(sc[f['file']].values())), k, f['file']))
@@ -147,7 +151,7 @@ def main():
         only = None
     for k, wav in enumerate(wavs, 1):
         if only and k != only: continue
-        W = json.load(open(os.path.join(wdir, f'part{k}.words.json'), encoding='utf-8'))
+        W = json.load(open(os.path.join(wdir, jsons[k - 1]), encoding='utf-8'))
         T = [fold(w[2]) for w in W]
         keep = [i for i, t in enumerate(T) if t]
         W = [W[i] for i in keep]; T = [T[i] for i in keep]
@@ -167,7 +171,9 @@ def main():
                 j0, j1, nm = r
                 cov = nm / max(1, L)
             need = 1.0 if L <= 2 else (0.75 if L <= 5 else 0.55)
-            if cov < need:
+            # المقاطع القصيرة: نقبل نص الكلمات لو جت مباشرة بعد المقطع اللي قبلها
+            near = r is not None and L <= 5 and cov >= 0.5 and r[0] <= 4
+            if cov < need and not near:
                 bad += 1
                 susp.append((os.path.basename(wav)[-8:], best['file'], si, round(cov, 2), s['path'], s['text'][:60]))
                 missing.append(s)
