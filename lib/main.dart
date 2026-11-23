@@ -12,6 +12,8 @@ import 'data/voice_lines.dart';
 import 'services/quran_ear.dart';
 import 'services/reminders.dart';
 import 'services/voice_pack.dart';
+import 'services/backup.dart';
+import 'widgets/backup_dialogs.dart';
 import 'screens/weekly_report.dart';
 import 'screens/home.dart';
 import 'screens/surah_list.dart';
@@ -43,6 +45,7 @@ class _MohafezAppState extends State<MohafezApp> {
   void initState() {
     super.initState();
     Progress.themeNotifier.addListener(_onTheme);
+    Progress.reloadTick.addListener(_onTheme);
   }
 
   void _onTheme() {
@@ -59,7 +62,7 @@ class _MohafezAppState extends State<MohafezApp> {
       systemNavigationBarIconBrightness: C.dark ? Brightness.light : Brightness.dark,
     ));
     return MaterialApp(
-      key: ValueKey(C.t.id),
+      key: ValueKey('${C.t.id}-${Progress.reloadTick.value}'),
       title: 'سَنَد',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
@@ -329,6 +332,12 @@ class _IntroScreenState extends State<IntroScreen> {
                           style: TextStyle(color: Color(0xFF2A1E07), fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
+                  TextButton(
+                    onPressed: () async {
+                      if (await showRestoreDialog(context)) _finish();
+                    },
+                    child: Text('عندي كود نسخة احتياطية', style: TextStyle(color: Color(0xFFC9B88F), fontSize: 13)),
+                  ),
                 ]),
               ),
             ]),
@@ -448,7 +457,10 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _autoCheck();
     // لما يخرج من التطبيق: نعيد جدولة التذكيرات (لو اتحفظ النهارده يتلغي تنبيه السلسلة)
-    if (state == AppLifecycleState.paused) Reminders.reschedule();
+    if (state == AppLifecycleState.paused) {
+      Reminders.reschedule();
+      Backup.auto();
+    }
   }
 
   void _autoCheck() {

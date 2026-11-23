@@ -61,6 +61,38 @@ class Sheikh {
     }).catchError((_) {});
   }
 
+  /// عدد آيات السورة المحفوظة على الموبايل لهذا القارئ
+  static Future<int> cachedCount(String folder, int s, int count) async {
+    var n = 0;
+    for (var a = 1; a <= count; a++) {
+      final f = await _cacheFile(folder, s, a);
+      if (await f.exists() && await f.length() > 2000) n++;
+    }
+    return n;
+  }
+
+  /// تحميل السورة كلها للاستماع من غير إنترنت (٤ آيات في نفس الوقت). بيرجع عدد اللي فشل.
+  static Future<int> downloadSurah(String folder, int s, int count, void Function(double) onProgress, {bool Function()? cancelled}) async {
+    var done = 0, failed = 0, next = 1;
+    Future<void> worker() async {
+      while (next <= count) {
+        if (cancelled?.call() ?? false) return;
+        final a = next++;
+        try {
+          final f = await _cacheFile(folder, s, a);
+          if (!(await f.exists() && await f.length() > 2000)) await _download(folder, s, a);
+        } catch (_) {
+          failed++;
+        }
+        done++;
+        onProgress(done / count);
+      }
+    }
+
+    await Future.wait([for (var k = 0; k < 4; k++) worker()]);
+    return failed;
+  }
+
   /// يشغّل الآية وينتظر حتى تنتهي. [fraction] لتشغيل جزء من بداية الآية فقط.
   static Future<void> play(String folder, int s, int a, {double speed = 1.0, double? fraction}) async {
     await stop();

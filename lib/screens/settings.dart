@@ -9,6 +9,8 @@ import 'about.dart';
 import '../services/quran_ear.dart';
 import '../services/reminders.dart';
 import '../services/voice_pack.dart';
+import '../services/backup.dart';
+import '../widgets/backup_dialogs.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -338,6 +340,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text('تصحيح صارم'),
               subtitle: Text('أي حرف مختلف يُحسب خطأ حتى في الكلمات الطويلة', style: TextStyle(fontSize: 11.5, color: C.muted)),
             ),
+          ]),
+        ),
+        SizedBox(height: 18),
+        SectionTitle('النسخة الاحتياطية'),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(
+              Progress.backupCode == null
+                  ? 'احفظ تقدّمك وشهاداتك في السحابة بكود سرّي، عشان لو غيّرت موبايلك أو مسحت التطبيق ترجّع كل حاجة.'
+                  : 'النسخة الاحتياطية مفعّلة وبتتحدّث تلقائيًا.${Progress.backupAt != null ? ' آخر حفظ: ${ar(Progress.backupAt!.day)}/${ar(Progress.backupAt!.month)} الساعة ${ar(Progress.backupAt!.hour)}:${ar(Progress.backupAt!.minute.toString().padLeft(2, '0'))}' : ''}',
+              style: TextStyle(fontSize: 12.5, color: C.muted, height: 1.7),
+            ),
+            SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                child: GoldButton(
+                  label: Progress.backupCode == null ? 'تفعيل النسخة الاحتياطية' : 'احفظ الآن',
+                  icon: Icons.cloud_upload_rounded,
+                  height: 46,
+                  onPressed: () async {
+                    final code = await Backup.now();
+                    if (!mounted) return;
+                    setState(() {});
+                    if (code == null) {
+                      toast(context, 'تعذّر الحفظ، تأكد من الإنترنت');
+                    } else {
+                      await showBackupCode(context, code);
+                    }
+                  },
+                ),
+              ),
+              if (Progress.backupCode != null) ...[
+                SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'عرض الكود',
+                  icon: Icon(Icons.key_rounded, color: C.gold),
+                  onPressed: () => showBackupCode(context, Progress.backupCode!),
+                ),
+              ],
+            ]),
+            TextButton(onPressed: () => showRestoreDialog(context), child: Text('استرجاع من كود')),
           ]),
         ),
         SizedBox(height: 18),

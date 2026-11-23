@@ -405,7 +405,10 @@ class _HifzSessionState extends State<HifzSession> {
           Text('سورة ${_su.name}'),
           Text('الآية ${ar(_a)} من ${ar(_su.count)}', style: TextStyle(fontSize: 12, color: C.muted)),
         ]),
-        actions: [IconButton(onPressed: _settings, icon: Icon(Icons.tune), tooltip: 'الإعدادات')],
+        actions: [
+          IconButton(onPressed: _offline, icon: Icon(Icons.download_for_offline_rounded), tooltip: 'تحميل السورة بدون إنترنت'),
+          IconButton(onPressed: _settings, icon: Icon(Icons.tune), tooltip: 'الإعدادات'),
+        ],
       ),
       body: SafeArea(
         child: Stack(children: [
@@ -523,6 +526,48 @@ class _HifzSessionState extends State<HifzSession> {
         if (_attempt > 0) Tag('المحاولة ${ar(_attempt)}'),
       ]),
     );
+  }
+
+  /// تحميل السورة كلها بصوت الشيخ الحالي عشان الحفظ يشتغل من غير إنترنت
+  Future<void> _offline() async {
+    final folder = _reciter;
+    final count = _su.count;
+    final have = await Sheikh.cachedCount(folder, widget.surah, count);
+    if (!mounted) return;
+    if (have >= count) {
+      toast(context, 'سورة ${_su.name} محمّلة كاملة، والشيخ يعمل بدون إنترنت');
+      return;
+    }
+    final prog = ValueNotifier<double>(have / count);
+    var cancel = false;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text('تحميل سورة ${_su.name}'),
+        content: ValueListenableBuilder<double>(
+          valueListenable: prog,
+          builder: (_, v, __) => Column(mainAxisSize: MainAxisSize.min, children: [
+            ProgressBar(value: v),
+            SizedBox(height: 10),
+            Text('${ar((v * 100).round())}٪ · بصوت ${reciterById(folder).name}', style: TextStyle(color: C.muted, fontSize: 12.5)),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancel = true;
+              Navigator.pop(ctx);
+            },
+            child: Text('إلغاء'),
+          ),
+        ],
+      ),
+    );
+    final failed = await Sheikh.downloadSurah(folder, widget.surah, count, (v) => prog.value = v, cancelled: () => cancel);
+    if (!mounted || cancel) return;
+    Navigator.of(context).pop();
+    toast(context, failed == 0 ? 'تم التحميل — السورة تعمل الآن بدون إنترنت' : 'تم تحميل معظم الآيات، وتعذّر ${ar(failed)} — أعد المحاولة');
   }
 
   /// خطوات الجلسة: استمع ← ردّد ← صحّح

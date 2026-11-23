@@ -19,5 +19,10 @@ service cloud.firestore {
         allow write: if request.auth != null && request.auth.uid == uid;
       }
     }
+
+    // النسخة الاحتياطية: الكود نفسه (١٢ حرف عشوائي) هو المفتاح السرّي
+    match /backups/{code} {
+      allow read, write: if request.auth != null && code.size() == 12;
+    }
   }
 }

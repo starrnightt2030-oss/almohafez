@@ -32,6 +32,11 @@ class Progress {
 
   static Future<void> load() async {
     _p = await SharedPreferences.getInstance();
+    _mem.clear();
+    _days.clear();
+    certs.clear();
+    tajweed.clear();
+    tests.clear();
     final m = _p.getString('mem');
     if (m != null) {
       final j = jsonDecode(m) as Map<String, dynamic>;
@@ -48,6 +53,52 @@ class Progress {
     if (ts != null) (jsonDecode(ts) as Map<String, dynamic>).forEach((k, v) => tests[k] = v as int);
     _loadExtra();
   }
+
+  /// نسخة من كل التقدّم والإعدادات (للنسخة الاحتياطية)
+  static Map<String, Object> snapshot() {
+    final out = <String, Object>{};
+    for (final k in _p.getKeys()) {
+      if (k == 'backupCode' || k == 'backupAt') continue;
+      final v = _p.get(k);
+      if (v is List) {
+        out['L:$k'] = v.map((e) => '$e').toList();
+      } else if (v is bool) {
+        out['B:$k'] = v;
+      } else if (v is int) {
+        out['I:$k'] = v;
+      } else if (v is double) {
+        out['D:$k'] = v;
+      } else if (v != null) {
+        out['S:$k'] = '$v';
+      }
+    }
+    return out;
+  }
+
+  /// استرجاع نسخة احتياطية (بيستبدل التقدّم الحالي) وإعادة التحميل
+  static Future<void> restore(Map<String, dynamic> snap) async {
+    final keep = {'backupCode': _p.getString('backupCode'), 'backupAt': _p.getInt('backupAt')};
+    await _p.clear();
+    for (final e in snap.entries) {
+      final t = e.key.substring(0, 2), k = e.key.substring(2), v = e.value;
+      if (t == 'L:') await _p.setStringList(k, (v as List).map((x) => '$x').toList());
+      if (t == 'B:') await _p.setBool(k, v as bool);
+      if (t == 'I:') await _p.setInt(k, (v as num).toInt());
+      if (t == 'D:') await _p.setDouble(k, (v as num).toDouble());
+      if (t == 'S:') await _p.setString(k, '$v');
+    }
+    if (keep['backupCode'] != null) await _p.setString('backupCode', keep['backupCode'] as String);
+    await load();
+  }
+
+  static String? get backupCode => _p.getString('backupCode');
+  static Future<void> setBackupCode(String c) => _p.setString('backupCode', c);
+  static DateTime? get backupAt {
+    final v = _p.getInt('backupAt');
+    return v == null ? null : DateTime.fromMillisecondsSinceEpoch(v);
+  }
+
+  static Future<void> markBackup() => _p.setInt('backupAt', DateTime.now().millisecondsSinceEpoch);
 
   static bool isMem(AyahRef r) => _mem[r.s]?.contains(r.a) ?? false;
 
@@ -255,6 +306,8 @@ class Progress {
   static double get voiceRate => _p.getDouble('voiceRate') ?? 0.45;
   static Future<void> setVoiceRate(double v) => _p.setDouble('voiceRate', v);
   static final ValueNotifier<int> themeNotifier = ValueNotifier<int>(0);
+  /// بيزيد بعد استرجاع نسخة احتياطية عشان التطبيق كله يتعاد بناؤه
+  static final ValueNotifier<int> reloadTick = ValueNotifier<int>(0);
   static int get themeIndex => _p.getInt('theme') ?? 0;
   static Future<void> setTheme(int i) async {
     await _p.setInt('theme', i);
