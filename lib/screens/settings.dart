@@ -226,6 +226,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
         ),
         SizedBox(height: 18),
+        SectionTitle('صوت الترحيب'),
+        Panel(
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: Progress.greetOn,
+            onChanged: (v) async {
+              await Progress.setGreetOn(v);
+              setState(() {});
+            },
+            title: Text('ترحيب صوتي عند فتح التطبيق'),
+            subtitle: Text('جملة قصيرة مرة واحدة في اليوم', style: TextStyle(fontSize: 11.5, color: C.muted)),
+          ),
+        ),
+        SizedBox(height: 18),
         SectionTitle('التذكير اليومي'),
         Panel(
           child: Column(children: [

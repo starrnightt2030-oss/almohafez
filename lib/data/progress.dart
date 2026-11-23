@@ -130,6 +130,18 @@ class Progress {
   static bool get goalCheered => _p.getString('goalCheered') == _key(DateTime.now());
   static Future<void> setGoalCheered() => _p.setString('goalCheered', _key(DateTime.now()));
 
+  /// ترحيب صوتي عند فتح التطبيق (مرة في اليوم)
+  static bool get greetOn => _p.getBool('greetOn') ?? true;
+  static Future<void> setGreetOn(bool v) => _p.setBool('greetOn', v);
+  static String? get lastGreet => _p.getString('lastGreet');
+  static Future<void> markGreeted() => _p.setString('lastGreet', _key(DateTime.now()));
+  static bool get greetedToday => lastGreet == _key(DateTime.now());
+  /// آخر يوم كان فيه نشاط قبل النهارده (لـ«أهلًا بعودتك»)
+  static bool get wasAway {
+    final y = DateTime.now().subtract(Duration(days: 1));
+    return !activeOn(y) && !activeOn(DateTime.now()) && memTotal > 0;
+  }
+
   static bool get notifAsked => _p.getBool('notifAsked') ?? false;
   static Future<void> setNotifAsked() => _p.setBool('notifAsked', true);
 

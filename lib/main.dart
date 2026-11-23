@@ -7,6 +7,8 @@ import 'data/quran.dart';
 import 'data/progress.dart';
 import 'data/course.dart';
 import 'services/voice.dart';
+import 'services/audio.dart';
+import 'data/voice_lines.dart';
 import 'services/quran_ear.dart';
 import 'services/reminders.dart';
 import 'screens/weekly_report.dart';
@@ -193,14 +195,45 @@ class _IntroScreenState extends State<IntroScreen> {
         'مكتبة في العقيدة والفقه والسيرة والأسرة والمعاملات، وأحاديث مختارة مع شرحها واختبارات للفهم.'),
   ];
 
+  bool _muted = false;
+  int _voiceRun = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // الافتتاح: ﴿وَرَتِّلِ ٱلْقُرْآنَ تَرْتِيلًا﴾ بصوت الشيخ، ثم صوت المعلّم مع كل صفحة
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final run = ++_voiceRun;
+      try {
+        await Sheikh.play(Progress.reciter, 73, 4).timeout(Duration(seconds: 12));
+      } catch (_) {}
+      if (!mounted || run != _voiceRun || _muted) return;
+      _speak(0);
+    });
+  }
+
+  void _speak(int i) {
+    if (_muted) return;
+    final lines = voiceLines['intro'] ?? const [];
+    if (i >= lines.length) return;
+    Voice.say(lines[i], clip: 'assets/audio/voice/intro_${i + 1}', force: true);
+  }
+
   @override
   void dispose() {
+    _voiceRun++;
+    Sheikh.stop();
+    Voice.stop();
     _pc.dispose();
     super.dispose();
   }
 
   Future<void> _finish() async {
+    _voiceRun++;
+    Sheikh.stop();
+    Voice.stop();
     await Progress.setIntroSeen();
+    await Progress.markGreeted();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       transitionDuration: Duration(milliseconds: 600),
@@ -234,6 +267,20 @@ class _IntroScreenState extends State<IntroScreen> {
                 child: Row(children: [
                   Image.asset(kEmblem, width: 54, height: 54),
                   Spacer(),
+                  IconButton(
+                    tooltip: _muted ? 'تشغيل الصوت' : 'كتم الصوت',
+                    icon: Icon(_muted ? Icons.volume_off_rounded : Icons.volume_up_rounded, color: Color(0xFFC9B88F)),
+                    onPressed: () {
+                      setState(() => _muted = !_muted);
+                      if (_muted) {
+                        _voiceRun++;
+                        Sheikh.stop();
+                        Voice.stop();
+                      } else {
+                        _speak(_i);
+                      }
+                    },
+                  ),
                   TextButton(onPressed: _finish, child: Text('تخطّي', style: TextStyle(color: Color(0xFFC9B88F)))),
                 ]),
               ),
@@ -241,7 +288,12 @@ class _IntroScreenState extends State<IntroScreen> {
                 child: PageView.builder(
                   controller: _pc,
                   itemCount: _pages.length,
-                  onPageChanged: (i) => setState(() => _i = i),
+                  onPageChanged: (i) {
+                    setState(() => _i = i);
+                    _voiceRun++;
+                    Sheikh.stop();
+                    _speak(i);
+                  },
                   itemBuilder: (_, i) => _page(i),
                 ),
               ),
@@ -356,6 +408,14 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // التحديث التلقائي: بعد ما التطبيق يفتح بثانيتين، وكل ما يرجع من الخلفية (مرة كل ٣ ساعات بالكتير)
     Future.delayed(Duration(seconds: 2), _autoCheck);
+    // ترحيب صوتي قصير مرة في اليوم (صباح/مساء/أهلًا بعودتك)
+    Future.delayed(Duration(milliseconds: 900), () async {
+      if (!mounted || !Progress.greetOn || Progress.greetedToday || !Progress.introSeen) return;
+      final away = Progress.wasAway;
+      await Progress.markGreeted();
+      final h = DateTime.now().hour;
+      Voice.cue(away ? 'greet_back' : (h >= 4 && h < 12 ? 'greet_morning' : 'greet_evening'), force: true);
+    });
     // التذكيرات: أول مرة نطلب الإذن، وبعدين نجدول، ولو اتفتح من إشعار التقرير نفتحه
     Future.delayed(Duration(seconds: 3), () async {
       await Reminders.init();
