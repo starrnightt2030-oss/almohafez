@@ -29,8 +29,10 @@ jobs:
           import json, glob, time
           from faster_whisper import WhisperModel
           m = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
-          for f in sorted(glob.glob('part*.mp3')):
+          for f in sorted(glob.glob('*.mp3')):
               out = f.replace('.mp3', '.words.json')
+              import os
+              if os.path.exists(out): continue
               t = time.time()
               import subprocess, numpy as np
               raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', f, '-f', 's16le', '-ac', '1', '-ar', '16000', '-'], capture_output=True, check=True).stdout
