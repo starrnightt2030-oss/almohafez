@@ -182,6 +182,9 @@ class Progress {
   static Future<void> setGoalCheered() => _p.setString('goalCheered', _key(DateTime.now()));
 
   /// ترحيب صوتي عند فتح التطبيق (مرة في اليوم)
+  /// آية الافتتاح ﴿وَرَتِّلِ ٱلْقُرْآنَ تَرْتِيلًا﴾ مع كل فتح للتطبيق
+  static bool get openingOn => _p.getBool('openingOn') ?? true;
+  static Future<void> setOpeningOn(bool v) => _p.setBool('openingOn', v);
   static bool get greetOn => _p.getBool('greetOn') ?? true;
   static Future<void> setGreetOn(bool v) => _p.setBool('greetOn', v);
   static String? get lastGreet => _p.getString('lastGreet');

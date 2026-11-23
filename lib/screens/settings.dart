@@ -229,9 +229,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
         ),
         SizedBox(height: 18),
-        SectionTitle('صوت الترحيب'),
+        SectionTitle('صوت الافتتاح والترحيب'),
         Panel(
-          child: SwitchListTile(
+          child: Column(children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: Progress.openingOn,
+            onChanged: (v) async {
+              await Progress.setOpeningOn(v);
+              setState(() {});
+            },
+            title: Text('﴿وَرَتِّلِ ٱلْقُرْآنَ تَرْتِيلًا﴾ عند فتح التطبيق'),
+            subtitle: Text('بصوت الشيخ الحصري', style: TextStyle(fontSize: 11.5, color: C.muted)),
+          ),
+          SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: Progress.greetOn,
             onChanged: (v) async {
@@ -239,8 +250,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {});
             },
             title: Text('ترحيب صوتي عند فتح التطبيق'),
-            subtitle: Text('جملة قصيرة مرة واحدة في اليوم', style: TextStyle(fontSize: 11.5, color: C.muted)),
+            subtitle: Text('صباح الخير / مساء الخير / أهلًا بعودتك', style: TextStyle(fontSize: 11.5, color: C.muted)),
           ),
+          ]),
         ),
         SizedBox(height: 18),
         SectionTitle('التذكير اليومي'),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -13,6 +14,7 @@ import 'services/quran_ear.dart';
 import 'services/reminders.dart';
 import 'services/voice_pack.dart';
 import 'services/backup.dart';
+import 'services/opening.dart';
 import 'widgets/backup_dialogs.dart';
 import 'screens/weekly_report.dart';
 import 'screens/home.dart';
@@ -108,6 +110,8 @@ class _SplashState extends State<Splash> {
   }
 
   Future<void> _boot() async {
+    // صوت الافتتاح مع ظهور الشعار (المستخدم الجديد بيسمعه في المقدمة)
+    if (Progress.introSeen) unawaited(Opening.run());
     final t = Future.delayed(Duration(milliseconds: 1900));
     await Future.wait([QuranData.load(), Courses.load()]);
     _booted = true;
@@ -209,7 +213,7 @@ class _IntroScreenState extends State<IntroScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final run = ++_voiceRun;
       try {
-        await Sheikh.play(Progress.reciter, 73, 4).timeout(Duration(seconds: 12));
+        await Opening.ayah();
       } catch (_) {}
       if (!mounted || run != _voiceRun || _muted) return;
       _speak(0);
@@ -226,7 +230,7 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   void dispose() {
     _voiceRun++;
-    Sheikh.stop();
+    Opening.stop();
     Voice.stop();
     _pc.dispose();
     super.dispose();
@@ -234,7 +238,7 @@ class _IntroScreenState extends State<IntroScreen> {
 
   Future<void> _finish() async {
     _voiceRun++;
-    Sheikh.stop();
+    Opening.stop();
     Voice.stop();
     await Progress.setIntroSeen();
     await Progress.markGreeted();
@@ -278,7 +282,7 @@ class _IntroScreenState extends State<IntroScreen> {
                       setState(() => _muted = !_muted);
                       if (_muted) {
                         _voiceRun++;
-                        Sheikh.stop();
+                        Opening.stop();
                         Voice.stop();
                       } else {
                         _speak(_i);
@@ -295,7 +299,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   onPageChanged: (i) {
                     setState(() => _i = i);
                     _voiceRun++;
-                    Sheikh.stop();
+                    Opening.stop();
                     _speak(i);
                   },
                   itemBuilder: (_, i) => _page(i),
@@ -418,14 +422,6 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // التحديث التلقائي: بعد ما التطبيق يفتح بثانيتين، وكل ما يرجع من الخلفية (مرة كل ٣ ساعات بالكتير)
     Future.delayed(Duration(seconds: 2), _autoCheck);
-    // ترحيب صوتي قصير مرة في اليوم (صباح/مساء/أهلًا بعودتك)
-    Future.delayed(Duration(milliseconds: 900), () async {
-      if (!mounted || !Progress.greetOn || Progress.greetedToday || !Progress.introSeen) return;
-      final away = Progress.wasAway;
-      await Progress.markGreeted();
-      final h = DateTime.now().hour;
-      Voice.cue(away ? 'greet_back' : (h >= 4 && h < 12 ? 'greet_morning' : 'greet_evening'), force: true);
-    });
     // التذكيرات: أول مرة نطلب الإذن، وبعدين نجدول، ولو اتفتح من إشعار التقرير نفتحه
     Future.delayed(Duration(seconds: 3), () async {
       await Reminders.init();

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'opening.dart';
 
 /// تشغيل تلاوة الشيخ آيةً آية.
 ///
@@ -96,6 +97,7 @@ class Sheikh {
   /// يشغّل الآية وينتظر حتى تنتهي. [fraction] لتشغيل جزء من بداية الآية فقط.
   static Future<void> play(String folder, int s, int a, {double speed = 1.0, double? fraction}) async {
     await stop();
+    await Opening.stop();
     final c = Completer<void>();
     _cancel = c;
 
