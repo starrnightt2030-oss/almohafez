@@ -9,6 +9,7 @@ import 'lesson.dart';
 import 'test_screen.dart';
 import 'certificate.dart';
 import 'weekly_report.dart';
+import 'groups.dart';
 import '../services/voice.dart';
 
 /// المسابقات: تحدي اليوم، مسابقات حسب الفرع، والمجموعات (قريبًا).
@@ -159,31 +160,24 @@ class _ArenaScreenState extends State<ArenaScreen> {
       SizedBox(height: 18),
       SectionTitle('المجموعات'),
       Panel(
-        border: C.line2,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            IconBox(icon: Icons.groups_rounded, color: C.purple, bg: C.purpleSoft),
-            SizedBox(width: 12),
-            Expanded(child: Text('احفظ مع عائلتك وأصدقائك', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600))),
-            Tag('قريبًا', fg: C.goldLight, bg: C.goldSoft),
-          ]),
-          SizedBox(height: 12),
-          for (final t in [
-            'أنشئ مجموعة وادعُ أصدقاءك برابط واحد',
-            'حدد سورة أو جزءًا أو بابًا ومدة يقسّمها التطبيق لوِرد يومي',
-            'تمديد المدة بتصويت الأعضاء، وتشجيع يومي',
-            'اختبار نهائي عادل وترتيب بالحفظ والتجويد والالتزام',
-          ])
-            Padding(
-              padding: EdgeInsets.only(bottom: 6),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Padding(padding: EdgeInsets.only(top: 6), child: Icon(Icons.circle, size: 6, color: C.purple)),
-                SizedBox(width: 8),
-                Expanded(child: Text(t, style: TextStyle(color: C.muted, fontSize: 13, height: 1.6))),
-              ]),
-            ),
+        onTap: () async {
+          await go(context, GroupsScreen());
+          if (mounted) setState(() {});
+        },
+        gradient: LinearGradient(colors: [C.purpleSoft, C.surface]),
+        child: Row(children: [
+          IconBox(icon: Icons.groups_rounded, color: C.purple, bg: C.purpleSoft, size: 54),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('احفظ مع عائلتك وأصحابك', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              SizedBox(height: 3),
+              Text('مجموعة بكود دعوة، خطة ومدة تقدر تمدّها، اختبار نهائي وترتيب', style: TextStyle(fontSize: 12, color: C.muted, height: 1.5)),
+            ]),
+          ),
+          Icon(Icons.chevron_left_rounded, color: C.muted),
         ]),
-      ).enter(6),
+      ).enter(7),
     ]);
   }
 

@@ -8,6 +8,15 @@ on:
     branches: [main]
     paths: ['release.json']
   workflow_dispatch:
+    inputs:
+      store:
+        description: 'نسخة جوجل بلاي (AAB بدون تحديث داخلي، ومن غير نشر Release)'
+        type: boolean
+        default: false
+      publish:
+        description: 'نشر Release على GitHub (للنسخة العادية)'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -60,6 +69,7 @@ jobs:
       - name: Generate Android project
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          STORE: ${{ inputs.store && '1' || '0' }}
         run: |
           flutter --version
           flutter create --org com.almohafez --project-name almohafez --platforms android .
@@ -71,7 +81,25 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
 
+      - name: Build store bundle (AAB)
+        if: ${{ inputs.store }}
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: >
+          flutter build appbundle --release
+          --build-name=${{ steps.v.outputs.version }}
+          --build-number=${{ steps.v.outputs.code }}
+          --dart-define=APP_VERSION=${{ steps.v.outputs.version }}
+          --dart-define=STORE=1
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.store }}
+        with:
+          name: sanad-play-store-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
       - name: Build APK
+        if: ${{ !inputs.store }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: >
@@ -82,14 +110,17 @@ jobs:
           --dart-define=APP_VERSION=${{ steps.v.outputs.version }}
 
       - name: Collect APK
+        if: ${{ !inputs.store }}
         run: cp build/app/outputs/flutter-apk/app-release.apk almohafez.apk
 
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.store }}
         with:
           name: almohafez-apk
           path: almohafez.apk
 
       - name: Publish release
+        if: ${{ !inputs.store && (github.event_name == 'push' || inputs.publish) }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.v.outputs.version }}

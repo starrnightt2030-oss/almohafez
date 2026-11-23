@@ -7,6 +7,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 const kAppName = 'سَنَد';
 const kEmblem = 'assets/brand/emblem.png';
 const kDeveloper = 'Mohamed-Eldawly';
+/// نسخة جوجل بلاي: التحديث من المتجر، فمفيش تحديث داخلي
+const kStore = bool.fromEnvironment('STORE');
 
 /// لوحة ألوان ثيم كامل.
 class AppTheme {

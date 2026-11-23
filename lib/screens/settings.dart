@@ -335,14 +335,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('$kAppName · الإصدار ${ar(Updater.current)}', style: TextStyle(fontWeight: FontWeight.w600)),
-                Text('المطوّر $kDeveloper · التحديثات تلقائية', style: TextStyle(fontSize: 12, color: C.muted)),
+                Text(kStore ? 'المطوّر $kDeveloper' : 'المطوّر $kDeveloper · التحديثات تلقائية', style: TextStyle(fontSize: 12, color: C.muted)),
               ]),
             ),
             Icon(Icons.chevron_left_rounded, color: C.muted),
           ]),
         ),
         SizedBox(height: 10),
-        GoldButton(label: 'البحث عن تحديث', icon: Icons.system_update_rounded, outlined: true, onPressed: () => checkForUpdates(context, manual: true)),
+        if (!kStore) GoldButton(label: 'البحث عن تحديث', icon: Icons.system_update_rounded, outlined: true, onPressed: () => checkForUpdates(context, manual: true)),
       ]),
     );
   }

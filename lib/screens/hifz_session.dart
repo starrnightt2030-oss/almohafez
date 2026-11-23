@@ -9,6 +9,7 @@ import '../logic/matcher.dart';
 import '../services/audio.dart';
 import '../services/speech.dart';
 import '../services/quran_ear.dart';
+import '../services/groups.dart';
 import '../logic/letters.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/services.dart';
@@ -83,6 +84,7 @@ class _HifzSessionState extends State<HifzSession> {
     Sheikh.stop();
     Ear.cancel();
     QuranEar.cancel();
+    Groups.pushAll();
     Voice.stop();
     _confetti.dispose();
     super.dispose();

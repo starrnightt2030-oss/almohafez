@@ -389,7 +389,7 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
   }
 
   void _autoCheck() {
-    if (!mounted) return;
+    if (!mounted || kStore) return;
     final now = DateTime.now();
     if (_lastCheck != null && now.difference(_lastCheck!) < Duration(hours: 3)) return;
     _lastCheck = now;

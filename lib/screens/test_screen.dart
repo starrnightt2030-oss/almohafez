@@ -38,7 +38,9 @@ class TestScreen extends StatefulWidget {
   final int questions;
   final int? certSurah;
   final bool placement;
-  const TestScreen._({required this.title, required this.pool, required this.questions, this.certSurah, this.placement = false});
+  /// بيتنادى بالنسبة النهائية لما الاختبار يخلص (للمجموعات)
+  final void Function(int pct)? onFinished;
+  const TestScreen._({required this.title, required this.pool, required this.questions, this.certSurah, this.placement = false, this.onFinished});
 
   factory TestScreen.surah(int s) {
     final su = QuranData.surah(s);
@@ -46,8 +48,8 @@ class TestScreen extends StatefulWidget {
     return TestScreen._(title: 'اختبار سورة ${su.name}', pool: QuranData.surahAyahs(s), questions: n, certSurah: s);
   }
 
-  factory TestScreen.range(String title, List<AyahRef> pool, {int questions = 6}) =>
-      TestScreen._(title: title, pool: pool, questions: questions);
+  factory TestScreen.range(String title, List<AyahRef> pool, {int questions = 6, void Function(int pct)? onFinished}) =>
+      TestScreen._(title: title, pool: pool, questions: questions, onFinished: onFinished);
 
   factory TestScreen.placement() =>
       TestScreen._(title: 'تحديد المستوى', pool: QuranData.juzAyahs(30), questions: 3, placement: true);
@@ -331,6 +333,7 @@ class _TestScreenState extends State<TestScreen> {
     if (_i + 1 >= _qs.length) {
       setState(() => _done = true);
       if (widget.certSurah != null) Progress.setTest(widget.certSurah!, (_avg * 100).round());
+      widget.onFinished?.call((_avg * 100).round());
       return;
     }
     setState(() => _i++);

@@ -29,7 +29,7 @@ class AboutScreen extends StatelessWidget {
           ]),
         ).enter(2),
         SizedBox(height: 12),
-        Panel(
+        if (!kStore) Panel(
           onTap: () => checkForUpdates(context, manual: true),
           border: C.green.withOpacity(0.4),
           child: Row(children: [
@@ -46,7 +46,7 @@ class AboutScreen extends StatelessWidget {
         ).enter(3),
         SizedBox(height: 12),
         Panel(
-          onTap: () => Share.share('تطبيق $kAppName — معلّمك الشخصي للقرآن الكريم: حفظ مع الشيخ وتصحيح فوري وأكاديمية تجويد ومكتبة إسلامية.\nhttps://github.com/${Updater.repo}/releases/latest'),
+          onTap: () => Share.share('تطبيق $kAppName — معلّمك الشخصي للقرآن الكريم: حفظ مع الشيخ وتصحيح فوري وأكاديمية تجويد ومكتبة إسلامية.\n${kStore ? 'https://play.google.com/store/apps/details?id=com.almohafez.almohafez' : 'https://github.com/${Updater.repo}/releases/latest'}'),
           child: Row(children: [
             IconBox(icon: Icons.share_rounded, color: C.gold, bg: C.goldSoft),
             SizedBox(width: 12),
