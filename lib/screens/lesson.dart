@@ -65,6 +65,7 @@ class _LessonScreenState extends State<LessonScreen> {
       if (ctx != null) {
         Scrollable.ensureVisible(ctx, duration: Duration(milliseconds: 450), alignment: 0.2, curve: Curves.easeOutCubic);
       }
+      if (i + 1 < _l.paras.length) Voice.prefetch('assets/audio/lessons/${_l.id}_${i + 2}');
       await Voice.narrate(_l.id, i, _l.paras[i]);
       if (!mounted || run != _run) return;
       await Future.delayed(Duration(milliseconds: 350));

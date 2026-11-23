@@ -32,10 +32,40 @@ class VoicePack {
   /// مسار الملف المتحمّل لو موجود (assets/audio/lessons/x.mp3 ← ملف على الجهاز).
   static String? file(String assetPath) {
     if (_dir == null || !_have.contains(assetPath)) return null;
-    return '${_dir!.path}/$assetPath';
+    final p = '${_dir!.path}/$assetPath';
+    if (!File(p).existsSync()) {
+      _have.remove(assetPath);
+      return null;
+    }
+    return p;
   }
 
   static int get count => _have.length;
+
+  static final Map<String, Future<String?>> _fetching = {};
+
+  /// يحمّل ملف واحد فورًا لو مش موجود (لما الدرس يتفتح قبل ما الحزمة كلها تنزل).
+  static Future<String?> fetch(String assetPath) async {
+    final have = file(assetPath);
+    if (have != null) return have;
+    return _fetching[assetPath] ??= _fetchOne(assetPath).whenComplete(() => _fetching.remove(assetPath));
+  }
+
+  static Future<String?> _fetchOne(String assetPath) async {
+    try {
+      final d = await _root();
+      final r = await http.get(Uri.parse('$_base/${Uri.encodeFull(assetPath)}')).timeout(Duration(seconds: 25));
+      if (r.statusCode != 200 || r.bodyBytes.length < 1000) return null;
+      final out = File('${d.path}/$assetPath');
+      await out.parent.create(recursive: true);
+      await out.writeAsBytes(r.bodyBytes, flush: true);
+      _have.add(assetPath);
+      unawaited(File('${d.path}/have.json').writeAsString(jsonEncode(_have.toList())).catchError((_) => File('')));
+      return out.path;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// يحمّل الناقص من الحزمة. آمن لو اتنادى أكتر من مرة.
   static Future<void> sync() {
@@ -71,6 +101,10 @@ class VoicePack {
               await out.writeAsBytes(r.bodyBytes, flush: true);
               _have.add(e.key);
               sigs[e.key] = '${e.value[1]}';
+              if (_have.length % 40 == 0) {
+                await File('${d.path}/have.json').writeAsString(jsonEncode(_have.toList()));
+                await sigFile.writeAsString(jsonEncode(sigs));
+              }
             }
           } catch (_) {}
           done += (e.value[0] as num).toInt();

@@ -83,6 +83,11 @@ class Voice {
 
   static bool get enabled => Progress.voiceOn;
 
+  /// يجهّز تسجيل الفقرة الجاية وإحنا بنسمع الحالية
+  static void prefetch(String clip) {
+    if (_asset(clip) == null) unawaited(VoicePack.fetch('$clip.mp3'));
+  }
+
   /// مسار التسجيل: من التطبيق نفسه، أو من حزمة الصوت المتحمّلة (بيبدأ بـ file:).
   static String? _asset(String path) {
     for (final ext in ['mp3', 'm4a', 'wav', 'ogg']) {
@@ -103,18 +108,26 @@ class Voice {
     await init();
     await stop();
     final t = ++_token;
-    final a = clip == null ? null : _asset(clip);
+    var a = clip == null ? null : _asset(clip);
+    // مش متحمّل لسه؟ نجيبه حالًا من الحزمة (شرح الدروس والأحاديث)
+    if (a == null && clip != null && (clip.contains('/lessons/') || clip.contains('/hadith/') || clip.contains('/quiz/'))) {
+      final f = await VoicePack.fetch('$clip.mp3');
+      if (t != _token) return;
+      if (f != null) a = 'file:$f';
+    }
     if (a != null) {
       try {
+        Duration? len;
         if (a.startsWith('file:')) {
-          await _player.setFilePath(a.substring(5));
+          len = await _player.setFilePath(a.substring(5));
         } else {
-          await _player.setAsset(a);
+          len = await _player.setAsset(a);
         }
+        await _player.setVolume(1.0);
         final done = _player.processingStateStream.skip(1).firstWhere((s) => s == ProcessingState.completed || s == ProcessingState.idle);
         unawaited(_player.play());
         // مهلة أمان: الصوت الموجّه عمره ما يوقّف الجلسة (ولا يمنع الشيخ إنه يبدأ)
-        await done.timeout(Duration(seconds: 20), onTimeout: () => ProcessingState.completed);
+        await done.timeout((len ?? Duration(seconds: 20)) + Duration(seconds: 4), onTimeout: () => ProcessingState.completed);
         return;
       } catch (_) {}
     }

@@ -436,10 +436,10 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
       }
     });
     // المصحِّح الذكي يتحمّل في الخلفية مرة واحدة (١٩ م.ب) عشان يبقى جاهز في الحفظ والاختبارات
+    // حزمة الصوت (شرح الدروس والأحاديث) — مستقلة وبدري، والجديد بس بعد كده
+    Future.delayed(Duration(seconds: 4), () => VoicePack.sync());
     Future.delayed(Duration(seconds: 6), () async {
       if (Progress.smartEar && !await QuranEar.checkInstalled()) await QuranEar.download();
-      // حزمة الصوت (شرح الدروس والأحاديث) — مرة واحدة، والجديد بس بعد كده
-      await VoicePack.sync();
     });
   }
 
@@ -490,7 +490,13 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
       LibraryScreen(key: ValueKey('library')),
       ArenaScreen(key: ValueKey('arena')),
     ];
-    return AppBackground(
+    // الرجوع بالإيماءة: من أي تاب يرجع للرئيسية، ومن الرئيسية يخرج
+    return PopScope(
+      canPop: _tab == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _tab != 0) goTab(0);
+      },
+      child: AppBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
@@ -525,6 +531,7 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
           ),
         ),
       ),
+    ),
     );
   }
 
