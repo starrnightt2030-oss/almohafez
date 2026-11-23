@@ -1,0 +1,28 @@
+name: Firebase check
+
+# يتأكد إن الدخول المجهول شغال وإن قواعد Firestore بتسمح بإنشاء مجموعة وقراءتها وحذفها.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        run: |
+          set -e
+          KEY=AIzaSyBbV_lDE6XagLbSWOa0fyw2nDRluOF3d0U
+          P=sanad-2b818
+          R=$(curl -s -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$KEY" -H 'Content-Type: application/json' -d '{"returnSecureToken":true}')
+          TOKEN=$(echo "$R" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('idToken',''))")
+          UID=$(echo "$R" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('localId',''))")
+          if [ -z "$TOKEN" ]; then echo "AUTH FAILED: $R"; exit 1; fi
+          echo "anonymous auth OK ($UID)"
+          DOC="https://firestore.googleapis.com/v1/projects/$P/databases/(default)/documents/groups/CHECK$RANDOM"
+          BODY="{\"fields\":{\"name\":{\"stringValue\":\"check\"},\"owner\":{\"stringValue\":\"$UID\"},\"count\":{\"integerValue\":\"1\"}}}"
+          echo "create:"; curl -s -X PATCH "$DOC" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$BODY" | head -c 400; echo
+          echo "read:"; curl -s "$DOC" -H "Authorization: Bearer $TOKEN" | head -c 300; echo
+          echo "member write:"; curl -s -X PATCH "$DOC/members/$UID" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"fields":{"name":{"stringValue":"x"}}}' | head -c 300; echo
+          echo "member delete:"; curl -s -X DELETE "$DOC/members/$UID" -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
+          echo "delete:"; curl -s -X DELETE "$DOC" -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
+          echo "unauthenticated read (should be denied):"; curl -s "$DOC" | head -c 200; echo
