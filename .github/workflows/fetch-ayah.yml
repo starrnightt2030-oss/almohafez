@@ -1,0 +1,25 @@
+name: Fetch opening ayah
+
+# يجيب ﴿وَرَتِّلِ ٱلْقُرْآنَ تَرْتِيلًا﴾ (المزمل ٤) بصوت الحصري من EveryAyah ويحطها في التطبيق نفسه
+# عشان تشتغل فورًا أول ما التطبيق يفتح حتى من غير إنترنت.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get -qq install -y ffmpeg >/dev/null
+          curl -fsSL -o /tmp/a.mp3 https://everyayah.com/data/Husary_128kbps/073004.mp3
+          ffmpeg -loglevel error -y -i /tmp/a.mp3 -af 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,afade=t=in:d=0.05' -ac 1 -ar 44100 -b:a 96k assets/audio/voice/opening_ayah.mp3
+          ffprobe -v error -show_entries format=duration -of csv=p=0 assets/audio/voice/opening_ayah.mp3
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add assets/audio/voice/opening_ayah.mp3
+          git commit -m "opening ayah (Husary 73:4)"
+          git push
