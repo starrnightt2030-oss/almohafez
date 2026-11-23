@@ -11,6 +11,7 @@ import 'services/audio.dart';
 import 'data/voice_lines.dart';
 import 'services/quran_ear.dart';
 import 'services/reminders.dart';
+import 'services/voice_pack.dart';
 import 'screens/weekly_report.dart';
 import 'screens/home.dart';
 import 'screens/surah_list.dart';
@@ -432,6 +433,8 @@ class ShellState extends State<Shell> with WidgetsBindingObserver {
     // المصحِّح الذكي يتحمّل في الخلفية مرة واحدة (١٩ م.ب) عشان يبقى جاهز في الحفظ والاختبارات
     Future.delayed(Duration(seconds: 6), () async {
       if (Progress.smartEar && !await QuranEar.checkInstalled()) await QuranEar.download();
+      // حزمة الصوت (شرح الدروس والأحاديث) — مرة واحدة، والجديد بس بعد كده
+      await VoicePack.sync();
     });
   }
 

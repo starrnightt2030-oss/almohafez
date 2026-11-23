@@ -8,6 +8,7 @@ import '../widgets/update_dialog.dart';
 import 'about.dart';
 import '../services/quran_ear.dart';
 import '../services/reminders.dart';
+import '../services/voice_pack.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -338,6 +339,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: Text('أي حرف مختلف يُحسب خطأ حتى في الكلمات الطويلة', style: TextStyle(fontSize: 11.5, color: C.muted)),
             ),
           ]),
+        ),
+        SizedBox(height: 18),
+        SectionTitle('حزمة الصوت'),
+        Panel(
+          child: ValueListenableBuilder<double?>(
+            valueListenable: VoicePack.progress,
+            builder: (_, p, __) => Row(children: [
+              Icon(p == null ? Icons.headphones_rounded : Icons.downloading_rounded, color: C.gold),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  p != null
+                      ? 'جارٍ تحميل شرح الدروس والأحاديث… ${ar((p * 100).round())}٪'
+                      : 'شرح الدروس والأحاديث بالصوت: ${ar(VoicePack.count)} تسجيل على جهازك',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+              if (p == null)
+                TextButton(
+                  onPressed: () async {
+                    await VoicePack.sync();
+                    if (mounted) setState(() {});
+                  },
+                  child: Text('تحديث'),
+                ),
+            ]),
+          ),
         ),
         SizedBox(height: 18),
         SectionTitle('عن التطبيق'),

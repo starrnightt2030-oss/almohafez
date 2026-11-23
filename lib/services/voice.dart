@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:just_audio/just_audio.dart';
 import '../data/voice_lines.dart';
 import '../data/progress.dart';
+import 'voice_pack.dart';
 
 /// الصوت الموجّه داخل التطبيق: يقرأ الشروحات والتوجيهات.
 /// إذا وُجد ملف مسجّل بصوتك في assets/audio يُشغَّل بدل القراءة الآلية.
@@ -22,6 +23,7 @@ class Voice {
       final m = await AssetManifest.loadFromAssetBundle(rootBundle);
       _assets = m.listAssets().where((a) => a.startsWith('assets/audio/')).toSet();
     } catch (_) {}
+    await VoicePack.load();
     try {
       await _tts.setLanguage('ar-SA').timeout(Duration(seconds: 5));
       await _tts.setSpeechRate(Progress.voiceRate).timeout(Duration(seconds: 3));
@@ -81,10 +83,13 @@ class Voice {
 
   static bool get enabled => Progress.voiceOn;
 
+  /// مسار التسجيل: من التطبيق نفسه، أو من حزمة الصوت المتحمّلة (بيبدأ بـ file:).
   static String? _asset(String path) {
     for (final ext in ['mp3', 'm4a', 'wav', 'ogg']) {
       final p = '$path.$ext';
       if (_assets.contains(p)) return p;
+      final f = VoicePack.file(p);
+      if (f != null) return 'file:$f';
     }
     return null;
   }
@@ -101,7 +106,11 @@ class Voice {
     final a = clip == null ? null : _asset(clip);
     if (a != null) {
       try {
-        await _player.setAsset(a);
+        if (a.startsWith('file:')) {
+          await _player.setFilePath(a.substring(5));
+        } else {
+          await _player.setAsset(a);
+        }
         final done = _player.processingStateStream.skip(1).firstWhere((s) => s == ProcessingState.completed || s == ProcessingState.idle);
         unawaited(_player.play());
         // مهلة أمان: الصوت الموجّه عمره ما يوقّف الجلسة (ولا يمنع الشيخ إنه يبدأ)

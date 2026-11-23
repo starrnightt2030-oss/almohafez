@@ -73,6 +73,44 @@ def align(S, T, band=600):
     return match
 
 
+def local(S, T):
+    """محاذاة محلية (Smith-Waterman) لكلمات مقطع داخل نافذة من التفريغ: (بداية، نهاية، عدد المتطابق)."""
+    n, m = len(S), len(T)
+    if n == 0 or m == 0:
+        return None
+    H = np.zeros((n + 1, m + 1), dtype=np.float32)
+    B = np.zeros((n + 1, m + 1), dtype=np.int8)
+    best, bi, bj = 0.0, 0, 0
+    for i in range(1, n + 1):
+        si = S[i - 1]
+        for j in range(1, m + 1):
+            c = sim(si, T[j - 1])
+            d = H[i - 1, j - 1] + (2.0 if c == 0 else (1.0 if c < 1 else -1.0))
+            u = H[i - 1, j] - 0.8
+            l = H[i, j - 1] - 0.8
+            v = max(0.0, d, u, l)
+            H[i, j] = v
+            B[i, j] = 0 if v == 0 else (1 if v == d else (2 if v == u else 3))
+            if v > best:
+                best, bi, bj = v, i, j
+    if best <= 0:
+        return None
+    i, j, nm, j1 = bi, bj, 0, bj - 1
+    j0 = j1
+    while i > 0 and j > 0 and B[i, j] != 0:
+        k = B[i, j]
+        if k == 1:
+            if sim(S[i - 1], T[j - 1]) < 1.0:
+                nm += 1
+            j0 = j - 1
+            i -= 1; j -= 1
+        elif k == 2:
+            i -= 1
+        else:
+            j -= 1
+    return j0, j1, nm
+
+
 def silences(wav, noise='-38dB', d=0.12):
     out = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', wav, '-af', f'silencedetect=noise={noise}:d={d}', '-f', 'null', '-'],
                          capture_output=True, text=True).stderr
@@ -86,63 +124,76 @@ def main():
     wavs = sys.argv[2:]
     scripts = [f for f in IDX['files'] if f['file'].startswith('سند_صوت_')]
     report = []
+    global susp, missing, START
+    import time
+    START = time.time()
+    susp, missing = [], []
+    # تحديد كل ملف صوت تبع أنهي نص: أكبر تداخل في الكلمات (كل نص لملف واحد)
+    from collections import Counter
+    sc = {f['file']: Counter(sum((words_of(x['text']) for x in f['segments']), [])) for f in scripts}
+    pairs = []
     for k, wav in enumerate(wavs, 1):
+        Tw = Counter(f for f in (fold(w[2]) for w in json.load(open(os.path.join(wdir, f'part{k}.words.json'), encoding='utf-8'))) if f)
+        for f in scripts:
+            inter = sum((Tw & sc[f['file']]).values())
+            pairs.append((inter / max(1, sum(sc[f['file']].values())), k, f['file']))
+    assign, used = {}, set()
+    for score, k, fn in sorted(pairs, reverse=True):
+        if k in assign or fn in used: continue
+        assign[k] = next(f for f in scripts if f['file'] == fn); used.add(fn)
+    if len(sys.argv) > 1 and os.environ.get('ONLY'):
+        only = int(os.environ['ONLY'])
+    else:
+        only = None
+    for k, wav in enumerate(wavs, 1):
+        if only and k != only: continue
         W = json.load(open(os.path.join(wdir, f'part{k}.words.json'), encoding='utf-8'))
         T = [fold(w[2]) for w in W]
         keep = [i for i, t in enumerate(T) if t]
         W = [W[i] for i in keep]; T = [T[i] for i in keep]
-        head = set(T[:80])
-        best = max(scripts, key=lambda f: len(head & set(sum((words_of(s['text']) for s in f['segments'][:12]), []))))
+        best = assign[k]
         segs = best['segments']
-        S, owner = [], []
-        for si, s in enumerate(segs):
-            for w in words_of(s['text']):
-                S.append(w); owner.append(si)
-        match = align(S, T)
-        matched = sum(1 for x in match if x >= 0)
         sil = silences(wav)
         dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', wav], capture_output=True, text=True).stdout)
-        # بداية كل مقطع = بداية أول كلمة متطابقة فيه
-        starts = []
-        for si in range(len(segs)):
-            idxs = [i for i, o in enumerate(owner) if o == si]
-            js = [match[i] for i in idxs if match[i] >= 0]
-            starts.append(W[min(js)][0] if js else None)
-        ends = []
-        for si in range(len(segs)):
-            idxs = [i for i, o in enumerate(owner) if o == si]
-            js = [match[i] for i in idxs if match[i] >= 0]
-            ends.append(W[max(js)][1] if js else None)
-        # حدود القطع: سكتة بين نهاية المقطع وبداية اللي بعده
-        cuts = [0.0]
-        for si in range(1, len(segs)):
-            a = ends[si - 1]; b = starts[si]
-            if a is None or b is None:
-                cuts.append(None); continue
-            lo, hi = min(a, b) - 0.4, max(a, b) + 0.4
-            cand = [(e - s, (s + e) / 2) for s, e in sil if e > lo and s < hi]
-            cuts.append(max(cand)[1] if cand else (a + b) / 2)
-        cuts.append(dur)
-        # الحدود المفقودة: تقسيم بالتناسب مع عدد الحروف
-        for si in range(1, len(cuts) - 1):
-            if cuts[si] is None:
-                p = next(x for x in range(si - 1, -1, -1) if cuts[x] is not None)
-                q = next(x for x in range(si + 1, len(cuts)) if cuts[x] is not None)
-                L = [len(segs[x]['text']) for x in range(p, q)]
-                cuts[si] = cuts[p] + (cuts[q] - cuts[p]) * sum(L[:si - p]) / sum(L)
-        bad = 0
+        pos, bad, ok = 0, 0, 0
         for si, s in enumerate(segs):
-            a, b = cuts[si], cuts[si + 1]
-            rate = len(s['text']) / max(0.1, b - a)
-            if rate < 6 or rate > 30 or starts[si] is None:
+            S = words_of(s['text'])
+            L = len(S)
+            win = T[pos:pos + (60 if L < 4 else 900)]
+            r = local(S, win)
+            if r is None:
+                cov = 0
+            else:
+                j0, j1, nm = r
+                cov = nm / max(1, L)
+            need = 1.0 if L <= 2 else (0.75 if L <= 5 else 0.55)
+            if cov < need:
                 bad += 1
+                susp.append((os.path.basename(wav)[-8:], best['file'], si, round(cov, 2), s['path'], s['text'][:60]))
+                missing.append(s)
+                out = os.path.join(ROOT, s['path'])
+                pass
+                continue
+            a_t, b_t = W[pos + j0][0], W[pos + j1][1]
+            pos = pos + j1 + 1
+            # القص عند السكتات المحيطة
+            before = [(e, st) for st, e in sil if e <= a_t + 0.15 and e >= a_t - 0.8]
+            a_c = (max(before)[0] + max(before)[1]) / 2 if before else max(0, a_t - 0.12)
+            a_c = max(a_c, a_t - 0.5)
+            after = [(st, e) for st, e in sil if st >= b_t - 0.15 and st <= b_t + 0.9]
+            b_c = min(after)[0] + 0.12 if after else b_t + 0.15
+            ok += 1
             out = os.path.join(ROOT, s['path'])
             os.makedirs(os.path.dirname(out), exist_ok=True)
-            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-ss', f'{max(0, a - 0.05):.3f}', '-to', f'{b + 0.05:.3f}', '-i', wav,
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-ss', f'{a_c:.3f}', '-to', f'{min(dur, b_c):.3f}', '-i', wav,
                             '-af', 'silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,afade=t=in:d=0.02',
-                            '-ac', '1', '-ar', '24000', '-b:a', '48k', out], check=True)
-        report.append((os.path.basename(wav), best['file'], len(segs), f'{matched}/{len(S)} words', f'suspicious {bad}'))
+                            '-ac', '1', '-ar', '24000', '-b:a', '40k', out], check=True)
+        matched = ok
+        S = segs
+        report.append((os.path.basename(wav), best['file'], len(segs), f'ok {ok}', f'missing {bad}'))
         print(*report[-1], flush=True)
+    json.dump(susp, open('/tmp/suspicious.json', 'w'), ensure_ascii=False, indent=0)
+    json.dump([{'path': m['path'], 'text': m['text']} for m in missing], open('/tmp/missing_segments.json', 'w'), ensure_ascii=False, indent=0)
     return report
 
 
