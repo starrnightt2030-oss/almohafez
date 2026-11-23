@@ -65,6 +65,12 @@ for name in ('android/app/build.gradle.kts', 'android/app/build.gradle'):
         else:
             g = re.sub(r'(compileOptions\s*\{)', r'\1\n        coreLibraryDesugaringEnabled true', g, count=1)
             g += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+    # lint في الريليز بيقع بسبب باج في lint مع مكتبات Firebase — مش محتاجينه في البناء
+    if 'checkReleaseBuilds' not in g:
+        if name.endswith('.kts'):
+            g = re.sub(r'(defaultConfig\s*\{)', 'lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }\n    ' + r'\1', g, count=1)
+        else:
+            g = re.sub(r'(defaultConfig\s*\{)', 'lintOptions {\n        checkReleaseBuilds false\n        abortOnError false\n    }\n    ' + r'\1', g, count=1)
     g = re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 37', g)
     g = re.sub(r'compileSdkVersion\s+flutter\.compileSdkVersion', 'compileSdkVersion 37', g)
     g = re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 23', g)
