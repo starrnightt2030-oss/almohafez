@@ -25,4 +25,10 @@ jobs:
           echo "member write:"; curl -s -X PATCH "$DOC/members/$U" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"fields":{"name":{"stringValue":"x"}}}' | head -c 300; echo
           echo "member delete:"; curl -s -X DELETE "$DOC/members/$U" -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
           echo "delete:"; curl -s -X DELETE "$DOC" -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
+          B="https://firestore.googleapis.com/v1/projects/$P/databases/(default)/documents/backups/CHECK$RANDOM"
+          B="${B:0:${#B}}"
+          BC="https://firestore.googleapis.com/v1/projects/$P/databases/(default)/documents/backups/CHECKABCD234"
+          echo "backup write:"; curl -s -X PATCH "$BC" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"fields":{"data":{"stringValue":"{}"}}}' | head -c 300; echo
+          echo "backup read:"; curl -s "$BC" -H "Authorization: Bearer $TOKEN" | head -c 200; echo
+          echo "backup delete:"; curl -s -X DELETE "$BC" -H "Authorization: Bearer $TOKEN" -w "%{http_code}\n"
           echo "unauthenticated read (should be denied):"; curl -s "$DOC" | head -c 200; echo
